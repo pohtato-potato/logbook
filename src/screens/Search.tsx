@@ -14,10 +14,11 @@ import { useLook } from '../ui/Look';
 import { go } from '../router';
 import { RichText } from './KeptCard';
 import { FeelingCard } from './FeelingCard';
+import { usePrivacy } from '../ui/Privacy';
 
 const long = (d: string) => parseDay(d).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
 /* Lines, #tags, @people and feelings, as you type. Results are announced; each opens its day, page or card. */
-export function SearchView({ q, results, lookup, tagFamilies = {}, onQ, onFeeling }: { q: string; results: SearchResults; lookup: Lookup; tagFamilies?: Record<string, Family>; onQ(q: string): void; onFeeling?(w: string): void }) {
+export function SearchView({ q, results, lookup, tagFamilies = {}, onQ, onFeeling, locked = false }: { locked?: boolean; q: string; results: SearchResults; lookup: Lookup; tagFamilies?: Record<string, Family>; onQ(q: string): void; onFeeling?(w: string): void }) {
   const { pal } = useLook(), r = results, any = r.lines.length || r.tags.length || r.people.length || r.feelings.length;
   const group = (title: string, body: ReactNode) => <div className="sgroup"><h2 className="lbl">{title}</h2>{body}</div>;
   return <div className="scr"><div className="content scroll">
@@ -31,11 +32,12 @@ export function SearchView({ q, results, lookup, tagFamilies = {}, onQ, onFeelin
         {r.people.length > 0 && group('People', <div className="faces">{r.people.map(p => <button key={p.id} type="button" className="face" style={{ ['--pc' as string]: PERSON_THREADS[p.thread % PERSON_THREADS.length] }} aria-label={`${p.name}. Open their page`} onClick={() => go({ name: 'person', id: p.id })}>{p.initial}</button>)}</div>)}
         {r.feelings.length > 0 && group('Feelings', <div className="chips">{r.feelings.map(h => <button key={h.w} type="button" className="feelchip" style={{ ['--fc' as string]: pal[h.family] }} aria-label={`${h.w}, a feeling. Open its card`} onClick={() => onFeeling?.(h.w)}>{h.w}</button>)}</div>)}
       </>}
+      {locked && q.trim() && <p className="hint">Some private entries aren’t searched while locked.</p>}
     </div>
   </div><Tabs current="" /></div>;
 }
 export function Search() {
-  const [q, setQ] = useState(''), [card, setCard] = useState<string | null>(null);
+  const [q, setQ] = useState(''), [card, setCard] = useState<string | null>(null), { locked } = usePrivacy();
   const d = useLiveQuery(async () => {
     const [entries, moments, tags] = await Promise.all([db.entries.toArray(), db.moments.toArray(), db.tags.toArray()]);
     const byDay: Record<string, Family[]> = {}; moments.forEach(m => (byDay[m.day] ??= []).push(m.family));
@@ -44,6 +46,6 @@ export function Search() {
       own: Object.fromEntries((await db.words.toArray()).map(w => [w.word, w.family])) as Record<string, Family> };
   }, []);
   if (!d) return <div className="scr" />;
-  return <><SearchView q={q} results={searchAll(q, d)} lookup={d.lookup} tagFamilies={d.tagFamilies} onQ={setQ} onFeeling={setCard} />
+  return <><SearchView q={q} results={searchAll(q, { ...d, locked })} locked={locked} lookup={d.lookup} tagFamilies={d.tagFamilies} onQ={setQ} onFeeling={setCard} />
     {card && <FeelingCard word={card} src={{ kind: 'none' }} own={d.own} onClose={() => setCard(null)} />}</>;
 }

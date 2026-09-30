@@ -98,3 +98,12 @@ export function lifeItems(entries: Entry[], spans: Span[], homes: Home[], lookup
   homes.forEach(h => items.push({ year: Number(h.from.slice(0, 4)), day: h.from, text: `Moved to ${h.name}`, later: false }));
   return items.sort((a, b) => b.day.localeCompare(a.day));
 }
+/* While locked, private entries keep their place (and dates, ratings, who) but none of their words, photos or sound. */
+export function maskPrivate(entries: Entry[], locked: boolean): Entry[] {
+  if (!locked) return entries;
+  return entries.map(e => {
+    if (!e.marks.priv) return e;
+    const d = e.data, data: Entry['data'] = !d ? d : d.kind === 'media' ? { ...d, title: PRIVATE_TEXT } : d.kind === 'quote' ? { kind: 'quote', who: d.who } : d.kind === 'keep' ? { kind: 'keep' } : d.kind === 'voice' ? { ...d, audio: new Blob() } : d;
+    return { ...e, text: PRIVATE_TEXT, tags: [], data };
+  });
+}

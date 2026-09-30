@@ -10,6 +10,7 @@ import { FeelingChip, TagChip } from '../ui/Chips';
 import { Icon } from '../ui/Icons';
 import { useLook } from '../ui/Look';
 import { BlobAudio, BlobImg } from '../ui/Blob';
+import { LockedEntry, usePrivacy } from '../ui/Privacy';
 
 type Opens = { onOpenFeeling: (w: string) => void; onOpenTag?: (tag: string) => void; onOpenPerson?: (initial: string) => void };
 /* A person by initial, ringed in their own thread colour (never a feeling colour). A button when it can open their page. */
@@ -38,6 +39,11 @@ const longDate = (d: string) => parseDay(d).toLocaleDateString('en-GB', { day: '
 export type KeptCardProps = Opens & { entry: Entry; lookup: Lookup; own: Record<string, Family>; onMenu?: (id: number) => void; thumbs?: Map<number, Blob>; tagHistory?: Record<string, Family[]>; todayFamily?: Family };
 /* One kept entry of any kind: its body, then its time and marks, and a ⋯ button to change or remove it. */
 export function KeptCard(p: KeptCardProps) {
+  const { locked } = usePrivacy();
+  if (locked && p.entry.marks.priv) return <LockedEntry time={p.entry.data?.kind === 'past' ? undefined : timeLabelIn(p.entry.at, p.entry.tz)} />;
+  return <KeptCardOpen {...p} />;
+}
+function KeptCardOpen(p: KeptCardProps) {
   const e = p.entry, d = e.data, look = useLook();
   const rich = (t: string) => <RichText text={t} own={p.own} lookup={p.lookup} tagHistory={p.tagHistory} todayFamily={p.todayFamily} onOpenFeeling={p.onOpenFeeling} onOpenTag={p.onOpenTag} onOpenPerson={p.onOpenPerson} />;
   let body: ReactNode;

@@ -24,5 +24,5 @@ export type DayStamps = { where?: { lat: number; lon: number }; weather?: { code
 export type DayRow = { day: string; overall?: { word: string; family: Family; strength: number; set: boolean }; grateful?: string; potd?: number; stamps?: DayStamps };
 export type Person = { id: string; initial: string; name: string; thread: number; birthday?: string };
 export type OwnWord = { word: string; family: Family; created: number };
-export type Settings = { id: 'main'; voice: number; dayStyle: 'bloom' | 'score'; theme: 'dark' | 'light'; motion: 'still' | 'gentle' | 'lively'; homes: { name: string; lat: number; lon: number; from: string; to?: string }[]; starterLoaded: boolean; lastExport?: number; sources?: { weather: boolean; places: boolean } };
+export type Settings = { id: 'main'; voice: number; dayStyle: 'bloom' | 'score'; theme: 'dark' | 'light'; motion: 'still' | 'gentle' | 'lively'; homes: { name: string; lat: number; lon: number; from: string; to?: string }[]; starterLoaded: boolean; lastExport?: number; sources?: { weather: boolean; places: boolean }; lock?: { credentialId: string; createdAt: number } };
 export const DEFAULT_SETTINGS: Settings = { id: 'main', voice: 0, dayStyle: 'bloom', theme: 'dark', motion: 'gentle', homes: [], starterLoaded: false };

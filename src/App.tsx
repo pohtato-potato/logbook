@@ -20,6 +20,7 @@ import { Shelf, Shelves } from './screens/Shelves';
 import { Person } from './screens/Person';
 import { TagPage } from './screens/TagPage';
 import { Search } from './screens/Search';
+import { PrivacyProvider } from './ui/Privacy';
 
 /* The Undo notice belongs to the screen it was shown on: moving to another screen clears it. */
 function ClearUndoOnMove({ at }: { at: string }) { const { moved } = useUndo(); useEffect(() => { moved(); }, [at, moved]); return null; }
@@ -35,7 +36,7 @@ export function App() {
     motion.speed = settings.motion === 'still' ? 0 : settings.motion === 'lively' ? 2.2 : 1; startMotion();
     return () => removeEventListener('resize', big);
   }, [settings.theme, settings.motion]);
-  return <div id="app-root"><LookProvider value={lookOf(settings.theme)}><UndoProvider>
+  return <div id="app-root"><LookProvider value={lookOf(settings.theme)}><UndoProvider><PrivacyProvider>
     <ClearUndoOnMove at={JSON.stringify(r)} />
     {r.name === 'today' && <Today />}
     {r.name === 'cal' && <Calendar month={r.month} tab={r.tab} />}
@@ -50,5 +51,5 @@ export function App() {
     {r.name === 'search' && <Search />}
     {r.name === 'settings' && <Settings />}
     {r.name === 'first-run' && <FirstRun />}
-  </UndoProvider></LookProvider></div>;
+  </PrivacyProvider></UndoProvider></LookProvider></div>;
 }

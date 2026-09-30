@@ -19,6 +19,8 @@ import { BlobImg } from '../ui/Blob';
 import { useNow } from '../ui/useNow';
 import { go, SHELF_IDS, type ShelfId } from '../router';
 import { nextBirthday } from '../domain/birthday';
+import { maskPrivate } from '../domain/looking';
+import { usePrivacy } from '../ui/Privacy';
 
 export const SHELF_NAME: Record<ShelfId, string> = { firsts: 'Firsts', media: 'Films, books and shows', quotes: 'Quotes', places: 'Places', keeps: 'Keepsakes', bdays: 'Birthdays and gifts', spans: 'Spans' };
 const EMPTY: Record<ShelfId, string> = { firsts: 'Firsts appear here when you mark something First.', media: 'Films, books and shows appear here when you keep one from the + button.', quotes: 'Quotes appear here when you keep one from the + button.',
@@ -101,10 +103,10 @@ export function Shelves() {
   return d ? <ShelvesView {...d} /> : <div className="scr" />;
 }
 export function Shelf({ shelf }: { shelf: ShelfId }) {
-  const today = dayKey(useNow());
+  const today = dayKey(useNow()), { locked } = usePrivacy();
   const d = useLiveQuery(async () => {
     const [entries, places, people, spans, settings, photos] = await Promise.all([db.entries.toArray(), db.places.toArray(), db.people.toArray(), db.spans.toArray(), getSettings(db), shelf === 'keeps' ? db.photos.toArray() : Promise.resolve([])]);
-    return { entries, places, people, spans, homes: settings.homes, lookup: await loadLookup(db), thumbs: new Map(photos.map(ph => [ph.id!, ph.thumb])) };
-  }, [shelf]);
+    return { entries: maskPrivate(entries, locked), places, people, spans, homes: settings.homes, lookup: await loadLookup(db), thumbs: new Map(photos.map(ph => [ph.id!, ph.thumb])) };
+  }, [shelf, locked]);
   return d ? <ShelfView shelf={shelf} today={today} {...d} /> : <div className="scr" />;
 }

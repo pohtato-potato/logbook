@@ -14,6 +14,7 @@ import { Year } from './calendar/Year';
 import { Gallery } from './calendar/Gallery';
 import { Life } from './calendar/Life';
 import { Feelings } from './calendar/Feelings';
+import { usePrivacy } from '../ui/Privacy';
 import { suggestedOverall } from './Today';
 import { useNow } from '../ui/useNow';
 import type { Span } from '../db/types';
@@ -76,6 +77,7 @@ export function CalendarView({ month, today, days, spans = [], open, onOpen, onM
   <Tabs current="cal" /></div>;
 }
 export function Calendar({ month, tab = 'days' }: { month?: string; tab?: CalTab }) {
+  const { locked } = usePrivacy();
   const today = dayKey(useNow()), m = month ?? today.slice(0, 7), [open, setOpen] = useState<string | null>(null);
   const { days, spans } = useLiveQuery(async () => {
     const first = m + '-01', last = m + '-31';
@@ -83,7 +85,7 @@ export function Calendar({ month, tab = 'days' }: { month?: string; tab?: CalTab
     return { days: buildMonthDays(moments, entries, rows), spans: (await db.spans.toArray()).filter(sp => sp.from <= last && sp.to >= first).sort((a, b) => a.from.localeCompare(b.from)) };
   }, [m]) ?? { days: {}, spans: [] };
   return <CalendarView month={m} today={today} days={days} spans={spans} open={open} onOpen={setOpen} onMonth={mm => go({ name: 'cal', month: mm, tab })} tab={tab}>
-    {tab === 'year' ? <Year year={Number(m.slice(0, 4))} today={today} /> : tab === 'gallery' ? <Gallery month={m} today={today} /> : tab === 'life' ? <Life /> : <Feelings month={m} />}</CalendarView>;
+    {tab === 'year' ? <Year year={Number(m.slice(0, 4))} today={today} /> : tab === 'gallery' ? <Gallery month={m} today={today} /> : tab === 'life' ? <Life locked={locked} /> : <Feelings month={m} locked={locked} />}</CalendarView>;
 }
 
 /* Every day with anything kept: moments, a set day overall, or just lines. */
