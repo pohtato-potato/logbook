@@ -18,7 +18,7 @@ export function dayToMarkdown(day: string, row: DayRow | undefined, entries: Ent
   const fm = ['---', `date: ${day}`];
   if (row?.overall) fm.push(`overall: ${q(`${row.overall.word} (${FAMILY_NAME[row.overall.family]}, ${ladderName(row.overall.family, row.overall.strength)})`)}`);
   if (row?.stamps?.weather) fm.push(`weather: ${q(weatherLine(row.stamps.weather))}`);
-  if (row?.stamps?.air) fm.push(`air: ${q(airWords(row.stamps.air))}`);
+  const air = row?.stamps?.air; if (air && !air.none && air.aqi != null && air.category) fm.push(`air: ${q(airWords({ aqi: air.aqi, category: air.category }))}`);
   const tags = [...new Set(entries.flatMap(e => e.tags))], people = [...new Set(entries.flatMap(e => e.people))];
   if (tags.length) fm.push(`tags: [${tags.map(q).join(', ')}]`);
   if (people.length) fm.push(`people: [${people.map(q).join(', ')}]`);

@@ -13,8 +13,9 @@ export function haversineKm(a: number, b: number, c: number, d: number): number 
   return 2 * R * Math.asin(Math.sqrt(x));
 }
 /* The home lived in on a day: the one whose dates cover it, else the latest one begun before it. */
-export function homeOn(homes: Home[], day: string): Home | undefined {
-  return homes.find(h => h.from <= day && (!h.to || day <= h.to)) ?? [...homes].filter(h => h.from <= day).sort((a, b) => b.from.localeCompare(a.from))[0];
+export function homeOn(homes: Home[], day: string, o: { current?: boolean } = {}): Home | undefined {
+  const covering = homes.find(h => h.from <= day && (!h.to || day <= h.to)); if (covering || o.current) return covering;
+  return [...homes].filter(h => h.from <= day).sort((a, b) => b.from.localeCompare(a.from))[0];
 }
 /* Where a day was: where the owner said, else a place kept that day with a position, else the home of that date. */
 export function dayPosition(day: string, stamps: DayStamps | undefined, placesThatDay: { lat: number; lon: number }[], homes: Home[]): Pos | null {
@@ -23,27 +24,27 @@ export function dayPosition(day: string, stamps: DayStamps | undefined, placesTh
   const h = homeOn(homes, day); return h ? { lat: h.lat, lon: h.lon, source: 'home' } : null;
 }
 /* "A different home each day until every home has had a turn" (spec, section 9). */
-export const homeForDistance = (homes: Home[], day: string) => (homes.length ? homes[Math.floor(parseDay(day).getTime() / DAY) % homes.length] : undefined);
+export const homeForDistance = (homes: Home[], day: string) => (homes.length ? homes[((Math.floor(parseDay(day).getTime() / DAY) % homes.length) + homes.length) % homes.length] : undefined);
 export const weatherLine = (w: { code: number; max: number; min: number; rain: number }) =>
   `${weatherWords(w.code)}, ${Math.round(w.max)}° by day, ${Math.round(w.min)}° at night${w.rain >= 0.5 ? `, ${Math.round(w.rain)} mm rain` : ''}`;
 /* A day's stamps, in the approved order, in words. Anything unknown is simply left out. */
 export function stampList(i: { day: string; today: string; stamps?: DayStamps; pos: Pos | null; homes: Home[]; people: Person[]; spans: Span[] }): [string, string][] {
-  const out: [string, string][] = [], w = i.stamps?.weather, a = i.stamps?.air, tz = timeZone();
+  const out: [string, string][] = [], w = i.stamps?.weather, a = i.stamps?.air, tz = timeZone(), past = i.day < i.today;
   if (w) out.push(['Outside', weatherLine(w)]);
-  if (a) out.push(['Air outside', airWords(a)]);
+  if (a && !a.none && a.aqi != null && a.category) out.push(['Air outside', airWords({ aqi: a.aqi, category: a.category })]);
   if (i.pos) {
     const s = sunTimes(i.day, i.pos.lat, i.pos.lon);
-    out.push(['Sun', s === 'up-all-day' ? 'The sun doesn’t set today' : s === 'down-all-day' ? 'The sun doesn’t rise today' : `rise ${timeLabelIn(s.rise, tz)}, set ${timeLabelIn(s.set, tz)}`]);
+    out.push(['Sun', s === 'up-all-day' ? (past ? 'The sun didn’t set' : 'The sun doesn’t set today') : s === 'down-all-day' ? (past ? 'The sun didn’t rise' : 'The sun doesn’t rise today') : `rise ${timeLabelIn(s.rise, tz)}, set ${timeLabelIn(s.set, tz)}`]);
     const len = dayLengthMin(i.day, i.pos.lat, i.pos.lon);
     if (len != null) out.push(['Day length', dayLengthWords(len, dayLengthMin(addDays(i.day, -1), i.pos.lat, i.pos.lon))]);
   }
   out.push(['Moon', moonOf(parseDay(i.day).getTime()).words]);
   const special = [...i.people.filter(p => nextBirthday(p.birthday, i.day)?.inDays === 0).map(p => `${p.name}’s birthday`),
     ...i.spans.filter(s => s.from <= i.day && i.day <= s.to).map(s => `Day ${daysBetween(s.from, i.day) + 1} of ${s.name}`)];
-  if (special.length) out.push(['Today is', special.join(' · ')]);
+  if (special.length) out.push([past ? 'That day was' : 'Today is', special.join(' · ')]);
   const far = homeForDistance(i.homes, i.day);
   if (far && i.pos && i.pos.source !== 'home') out.push(['From home', `${Math.round(haversineKm(i.pos.lat, i.pos.lon, far.lat, far.lon))} km from ${far.name}`]);
-  const here = homeOn(i.homes, i.day); if (here) out.push(['At this home', `${daysBetween(here.from, i.day) + 1} days`]);
+  const here = homeOn(i.homes, i.day, { current: true }); if (here) out.push(['At this home', `${daysBetween(here.from, i.day) + 1} days`]);
   const next = [...i.spans].filter(s => s.from > i.today).sort((x, y) => x.from.localeCompare(y.from))[0];
   if (next && i.day === i.today) out.push(['Next trip', `${next.name}, in ${daysBetween(i.today, next.from)} days`]);
   return out;

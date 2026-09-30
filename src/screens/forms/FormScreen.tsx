@@ -38,7 +38,9 @@ export function FormScreen({ kind }: { kind: FormKind }) {
   const onSuggest = async () => {
     if (!pos) return; if (!sourcesOf(await getSettings(db)).places) { setSState('off'); return; }
     setSState('loading'); const q = overpassQuery(pos.lat, pos.lon);
-    try { const list = parsePlaces(await fetchJson(q.url, q.init), pos.lat, pos.lon); setSugg(list); setSState(list.length ? 'idle' : 'none'); } catch { setSState('offline'); }
+    try { const list = parsePlaces(await fetchJson(q.url, q.init), pos.lat, pos.lon);
+      if (!sourcesOf(await getSettings(db)).places) { setSugg([]); setSState('off'); return; } // switched off while asking: drop the answer
+      setSugg(list); setSState(list.length ? 'idle' : 'none'); } catch { setSState('offline'); }
   };
   const [person, setPerson] = useForm<PersonState>({ who: [], how: 'In person' });
   const [keepsake, setKeepsake] = useForm<KeepState & { file?: File }>({ name: '' });

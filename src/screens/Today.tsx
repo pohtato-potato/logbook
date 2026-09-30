@@ -92,7 +92,7 @@ export function Today() {
     <TodayView now={now} greeting={VOICES[data.settings.voice % VOICES.length].greeting} night={isNight(now)} entries={data.entries} moments={data.moments} overall={data.row?.overall} suggested={suggested} grateful={data.row?.grateful} own={data.own} tagHistory={data.tagHistory} lookup={data.lookup}
       stamps={{ list: st.list, status: st.status, open: stampsOpen, onToggle: () => setStampsOpen(!stampsOpen), canLocate: typeof navigator !== 'undefined' && 'geolocation' in navigator, placeSource: st.pos?.source,
         onWhere: () => navigator.geolocation.getCurrentPosition(async p => { try { undo.show(await addWhereToday(db, day, { lat: roundCoord(p.coords.latitude), lon: roundCoord(p.coords.longitude) }), 'Added where you are today.'); st.refresh(); } catch (e) { undo.fail(e); } },
-          () => undo.fail(Object.assign(new Error('Logbook couldn’t get your position. Weather uses your home instead.'), { name: 'PlainMessage' })), { maximumAge: 60_000, timeout: 15_000 }) }}
+          () => undo.fail(Object.assign(new Error(data.settings.homes.length ? 'Logbook couldn’t get your position. Weather uses your home instead.' : 'Logbook couldn’t get your position.'), { name: 'PlainMessage' })), { maximumAge: 60_000, timeout: 15_000 }) }}
       thumbs={new Map(data.photos.map(ph => [ph.id, ph.thumb]))} photos={data.photos} potd={data.row?.potd}
       onPickPhotos={async files => { try { const r = await addPhotos(db, files, new Date());
         if (r.added) undo.show(r.undo, photosMessage(r.added, r.failed)); else undo.fail(Object.assign(new Error(photosMessage(0, r.failed)), { name: 'NotAnImageError' })); } catch (e) { undo.fail(e); } }}

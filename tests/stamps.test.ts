@@ -75,7 +75,7 @@ describe('fetching and caching', () => {
     await ensureStamps(db, '2026-09-29', now, slow); expect((await db.days.get('2026-09-29'))?.stamps?.weather).toBeUndefined();
   });
   it('no place known: no request', async () => { const log: string[] = []; expect(await ensureStamps(db, '2026-09-29', now, fake(log))).toBe('no-place'); expect(log).toEqual([]); });
-  it('before 1940 there is nothing to ask', async () => { await saveSettings(db, { homes: [{ ...homes[0], from: '1900-01-01' }] }); const log: string[] = []; expect(await ensureStamps(db, '1935-06-01', now, fake(log))).toBe('ok'); expect(log).toEqual([]); });
+  it('before 1940 there is nothing to ask', async () => { await saveSettings(db, { homes: [{ ...homes[0], from: '1900-01-01' }] }); const log: string[] = []; expect(await ensureStamps(db, '1935-06-01', now, fake(log))).toBe('none'); expect(log).toEqual([]); });
   it('a place kept with a position that day is where the weather comes from', async () => {
     const pid = await db.places.add({ name: 'Café', first: false, visits: 1, lat: 12.345, lon: 23.456 });
     await db.entries.add({ day: '2026-09-29', at: now.getTime(), tz: 'UTC', kind: 'place', text: '', marks: {}, tags: [], people: [], writtenAt: 0, data: { kind: 'place', placeId: pid, first: false } });

@@ -33,4 +33,10 @@ describe('stamps on Today', () => {
     const html = renderToStaticMarkup(<TodayView {...base} night={true} />);
     expect(html).not.toContain('Today’s stamps'); expect(html).toMatch(/grateful for · stamps|stamps/);
   });
+  it('a past day says no place is known, with no "where I am" button', () => {
+    const html = renderToStaticMarkup(<StampsPanelView {...stamps} list={[['Moon', 'Full moon']]} status="no-place" isToday={false} />);
+    expect(html).toContain('No place is known for this day'); expect(html).not.toContain('Add where I am today');
+  });
+  it('outside the records says so', () => expect(renderToStaticMarkup(<StampsPanelView {...stamps} status="none" />)).toContain('No weather records reach this day.'));
 });
+

@@ -60,7 +60,7 @@ export function PlaceFormView(p: PlaceState & Change<PlaceState> & { suggestions
     {p.error && <p className="hint" role="alert">{p.error}</p>}
     <p className="hint">{p.pos ? 'Kept to about 100 metres. Logbook reads your position only when you tap the button.' : 'It shows on your map once it has a position. Without one, it is still kept in your places.'}</p>
     {p.pos && p.onSuggest && <>
-      {p.suggestState !== 'off' && <button type="button" className="btn wide" disabled={p.suggestState === 'loading'} onClick={p.onSuggest}>{p.suggestState === 'loading' ? 'Asking OpenStreetMap…' : 'Suggest names nearby'}</button>}
+      <button type="button" className="btn wide" disabled={p.suggestState === 'loading'} onClick={p.onSuggest}>{p.suggestState === 'loading' ? 'Asking OpenStreetMap…' : 'Suggest names nearby'}</button>
       {!!p.suggestions?.length && <><Chips label="Names nearby" options={p.suggestions.map(x => x.name)} value={p.name.trim()} on={name => p.onChange({ name })} names={n => `${n}, ${p.suggestions!.find(x => x.name === n)!.km} km`} />
         <p className="hint">Names from OpenStreetMap. You can change any of them.</p></>}
       {p.suggestState && SUGGEST_SAYS[p.suggestState] && <p className="hint" role="status">{SUGGEST_SAYS[p.suggestState]}</p>}</>}

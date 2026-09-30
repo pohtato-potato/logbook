@@ -62,7 +62,7 @@ export function DayPage({ day }: { day: string }) {
   }), [day]);
   if (!data) return <div className="scr" />;
   return <><DayPageView day={day} style={data.settings.dayStyle} entries={data.entries} moments={data.moments} overall={data.row?.overall} own={data.own} lookup={data.lookup} thumbs={data.thumbs} onOpenFeeling={(word, id) => setCard({ word, id })} onEntryMenu={setMenu}
-      stamps={{ list: st.list, status: st.status, open, onToggle: () => setOpen(!open), onWhere: () => {}, canLocate: false, placeSource: st.pos?.source }} />
+      stamps={{ list: st.list, status: st.status, open, onToggle: () => setOpen(!open), onWhere: () => {}, canLocate: false, placeSource: st.pos?.source, isToday: false }} />
     {menu != null && <EntryMenu id={menu} onClose={() => setMenu(null)} />}
     {card && <FeelingCard word={card.word} src={{ kind: 'entry', id: card.id }} own={data.own} onClose={() => setCard(null)} />}</>;
 }
