@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { useRoute } from './router';
-import { UndoProvider } from './ui/Undo';
+import { UndoProvider, useUndo } from './ui/Undo';
 import { LookProvider } from './ui/Look';
 import { lookOf } from './draw/forms';
 import { motion, startMotion } from './draw/Canvas';
@@ -15,6 +15,8 @@ import { FeelingPicker } from './screens/FeelingPicker';
 import { Settings } from './screens/Settings';
 import { FirstRun } from './screens/FirstRun';
 
+/* The Undo notice belongs to the screen it was shown on: moving to another screen clears it. */
+function ClearUndoOnMove({ at }: { at: string }) { const { moved } = useUndo(); useEffect(() => { moved(); }, [at, moved]); return null; }
 export function App() {
   const r = useRoute();
   const settings = useLiveQuery(() => getSettings(db), []) ?? DEFAULT_SETTINGS;
@@ -26,6 +28,7 @@ export function App() {
     motion.speed = settings.motion === 'still' ? 0 : settings.motion === 'lively' ? 2.2 : 1; startMotion();
   }, [settings.theme, settings.motion]);
   return <div id="app-root"><LookProvider value={lookOf(settings.theme)}><UndoProvider>
+    <ClearUndoOnMove at={JSON.stringify(r)} />
     {r.name === 'today' && <Today />}
     {r.name === 'cal' && <Calendar month={r.month} />}
     {r.name === 'day' && <DayPage day={r.day} />}

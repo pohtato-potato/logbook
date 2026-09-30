@@ -16,8 +16,10 @@ def conv(block_sel, body):
 out = []
 for m in re.finditer(r'([^{}@]+)\{([^{}]*)\}', src):
     sel, body = m.group(1).strip(), m.group(2).strip()
-    if not sel or DROP.search(sel):
+    parts = [x.strip() for x in sel.split(',') if x.strip() and not DROP.search(x)]
+    if not parts:
         continue
+    sel = ','.join(parts)
     if sel.startswith('.phone{'):
         continue
     if sel == '.phone':

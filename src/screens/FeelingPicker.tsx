@@ -67,9 +67,9 @@ export function FeelingPicker({ when: startWhen, word: startWord }: { when: When
   const patch = (x: Partial<typeof s>) => set(prev => ({ ...prev, ...x }));
   const keep = async (another: boolean) => {
     const sel = findWord(s.word, own); if (!sel || s.query.trim()) return;
-    if (s.when === 'day') { undo.show(await setOverall(db, dayKey(new Date()), { word: sel.w, family: s.fam, strength: s.strength }), `The day overall is now ${sel.w}.`); go({ name: 'today' }); return; }
+    if (s.when === 'day') { undo.show(await setOverall(db, dayKey(new Date()), { word: sel.w, family: s.fam, strength: s.strength }), `The day overall is now ${sel.w}.`, { carry: true }); go({ name: 'today' }); return; }
     const r = await keepMoment(db, { word: sel.w, family: s.fam, second: s.second, about: s.about || undefined, strength: s.strength, at: new Date() });
-    undo.show(r.undo, another ? `Kept ${sel.w}. Pick another.` : `Kept ${sel.w} in your inner weather.`);
+    undo.show(r.undo, another ? `Kept ${sel.w}. Pick another.` : `Kept ${sel.w} in your inner weather.`, { carry: !another });
     if (another) patch({ about: '', second: undefined, query: '', word: '' }); else go({ name: 'today' });
   };
   return <FeelingPickerView {...s} own={own}
