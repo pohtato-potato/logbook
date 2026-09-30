@@ -18,6 +18,7 @@ import { useLook } from '../ui/Look';
 import { BlobImg } from '../ui/Blob';
 import { useNow } from '../ui/useNow';
 import { go, SHELF_IDS, type ShelfId } from '../router';
+import { nextBirthday } from '../domain/birthday';
 
 export const SHELF_NAME: Record<ShelfId, string> = { firsts: 'Firsts', media: 'Films, books and shows', quotes: 'Quotes', places: 'Places', keeps: 'Keepsakes', bdays: 'Birthdays and gifts', spans: 'Spans' };
 const EMPTY: Record<ShelfId, string> = { firsts: 'Firsts appear here when you mark something First.', media: 'Films, books and shows appear here when you keep one from the + button.', quotes: 'Quotes appear here when you keep one from the + button.',
@@ -25,13 +26,7 @@ const EMPTY: Record<ShelfId, string> = { firsts: 'Firsts appear here when you ma
 const short = (d: string) => parseDay(d).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
 const plural = (n: number, one: string, many = one + 's') => `${n} ${n === 1 ? one : many}`;
 const count = (n: number, one: string) => (n ? plural(n, one) : 'None yet');
-const DAY = 86400000;
-/* A birthday stored as MM-DD: its next date on or after today, and how many days away. */
-export function nextBirthday(mmdd: string | undefined, today: string): { day: string; inDays: number } | null {
-  if (!mmdd || !/^\d{2}-\d{2}$/.test(mmdd)) return null;
-  const y = Number(today.slice(0, 4)), at = (yr: number) => `${yr}-${mmdd}`, day = at(y) >= today ? at(y) : at(y + 1);
-  return { day, inDays: Math.round((parseDay(day).getTime() - parseDay(today).getTime()) / DAY) };
-}
+export { nextBirthday };
 const media = (es: Entry[]) => es.filter(e => e.data?.kind === 'media');
 /* The small line under each shelf's name. */
 export function shelfCounts(entries: Entry[], places: Place[], people: Person[], spans: Span[], today: string): Record<ShelfId, string> {

@@ -19,8 +19,10 @@ export type Photo = { id?: number; day: string; blob: Blob; thumb: Blob; takenAt
 export type Place = { id?: number; name: string; lat?: number; lon?: number; first: boolean; visits: number };
 export type Span = { id?: number; name: string; from: string; to: string; family: Family };
 export type Moment = { id?: number; day: string; at: number; word: string; family: Family; second?: Family; about?: string; strength: number; entryId?: number };
-export type DayRow = { day: string; overall?: { word: string; family: Family; strength: number; set: boolean }; grateful?: string; potd?: number };
+/* A day's automatic stamps: where the owner said they were, and cached weather and air (final once the day is well over). */
+export type DayStamps = { where?: { lat: number; lon: number }; weather?: { code: number; max: number; min: number; rain: number; final: boolean; at: number }; air?: { aqi: number; category: string; lead: string; final: boolean; at: number }; pending?: boolean };
+export type DayRow = { day: string; overall?: { word: string; family: Family; strength: number; set: boolean }; grateful?: string; potd?: number; stamps?: DayStamps };
 export type Person = { id: string; initial: string; name: string; thread: number; birthday?: string };
 export type OwnWord = { word: string; family: Family; created: number };
-export type Settings = { id: 'main'; voice: number; dayStyle: 'bloom' | 'score'; theme: 'dark' | 'light'; motion: 'still' | 'gentle' | 'lively'; homes: { name: string; lat: number; lon: number; from: string; to?: string }[]; starterLoaded: boolean; lastExport?: number };
+export type Settings = { id: 'main'; voice: number; dayStyle: 'bloom' | 'score'; theme: 'dark' | 'light'; motion: 'still' | 'gentle' | 'lively'; homes: { name: string; lat: number; lon: number; from: string; to?: string }[]; starterLoaded: boolean; lastExport?: number; sources?: { weather: boolean; places: boolean } };
 export const DEFAULT_SETTINGS: Settings = { id: 'main', voice: 0, dayStyle: 'bloom', theme: 'dark', motion: 'gentle', homes: [], starterLoaded: false };
