@@ -32,9 +32,11 @@ export function FeelingCard({ word, src, own, onClose, onRemoveFromDraft }: { wo
   const close = x ? x.close.filter(w => findWord(w, {})).slice(0, 5) : targets.slice(0, 4);
   const where = src.kind === 'draft' ? 'from this line' : src.kind === 'entry' ? 'from this entry' : src.kind === 'moment' ? 'from today' : '';
   const remove = async () => {
-    if (src.kind === 'draft') onRemoveFromDraft?.(fo.w);
-    else if (src.kind === 'entry') undo.show(await removeFeelingFromEntry(db, src.id, fo.w), `Removed ${fo.w} from this entry.`);
-    else if (src.kind === 'moment') undo.show(await removeMoment(db, src.id), `Removed ${fo.w} from today.`);
+    try {
+      if (src.kind === 'draft') onRemoveFromDraft?.(fo.w);
+      else if (src.kind === 'entry') undo.show(await removeFeelingFromEntry(db, src.id, fo.w), `Removed ${fo.w} from this entry.`);
+      else if (src.kind === 'moment') undo.show(await removeMoment(db, src.id), `Removed ${fo.w} from today.`);
+    } catch (e) { undo.fail(e); }
     onClose();
   };
   return <FeelingCardView word={fo.w} family={fo.family} meaning={meaning} lang={x?.lang} strength={strength} close={close} canRemove={isOrig && src.kind !== 'none'} where={where} onRemove={remove} onClose={onClose} onOpenWord={setShown} />;

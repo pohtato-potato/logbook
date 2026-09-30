@@ -49,7 +49,7 @@ export const confirmOverall = writeOverall;
 export async function removeFeelingFromEntry(db: LogbookDb, entryId: number, word: string): Promise<Undo> {
   const e = await db.entries.get(entryId); if (!e) return once('Nothing', async () => {});
   const moments = await db.moments.where('entryId').equals(entryId).toArray();
-  await db.transaction('rw', db.entries, db.moments, async () => {
+  await guard(() => db.transaction('rw', db.entries, db.moments, async () => {
     await db.entries.update(entryId, { text: removeFeelingToken(e.text, word) });
     for (const m of moments) {
       const words = [m.word, ...(m.about ? m.about.replace(/^then /, '').split(', ') : [])].filter(w => w !== word);
@@ -61,16 +61,16 @@ export async function removeFeelingFromEntry(db: LogbookDb, entryId: number, wor
       if (moment!.about) next.about = moment!.about;
       await db.moments.put(next);
     }
-  });
+  }));
   return once(`Removed ${word}`, () => db.transaction('rw', db.entries, db.moments, async () => { await db.entries.put(e); for (const m of moments) await db.moments.put(m); }));
 }
 export async function removeMoment(db: LogbookDb, momentId: number): Promise<Undo> {
-  const m = await db.moments.get(momentId); await db.moments.delete(momentId);
+  const m = await db.moments.get(momentId); await guard(() => db.moments.delete(momentId));
   return once(`Removed ${m?.word ?? ''}`, async () => { if (m) await db.moments.put(m); });
 }
 export async function removeEntry(db: LogbookDb, entryId: number): Promise<Undo> {
   const e = await db.entries.get(entryId), ms = await db.moments.where('entryId').equals(entryId).toArray();
-  await db.transaction('rw', db.entries, db.moments, async () => { await db.entries.delete(entryId); await db.moments.where('entryId').equals(entryId).delete(); });
+  await guard(() => db.transaction('rw', db.entries, db.moments, async () => { await db.entries.delete(entryId); await db.moments.where('entryId').equals(entryId).delete(); }));
   return once('Removed', () => db.transaction('rw', db.entries, db.moments, async () => { if (e) await db.entries.put(e); for (const m of ms) await db.moments.put(m); }));
 }
 export async function addOwnWord(db: LogbookDb, word: string, family: Family) { await guard(() => db.words.put({ word: word.trim().toLowerCase(), family, created: Date.now() })); }

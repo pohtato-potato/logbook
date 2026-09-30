@@ -3,7 +3,8 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db/db';
 import { confirmOverall, getSettings, removeEntry } from '../db/actions';
 import type { DayRow, Entry, Moment } from '../db/types';
-import { dayKey, isNight, timeLabel } from '../domain/day';
+import { dayKey, isNight, parseDay, timeLabel } from '../domain/day';
+import { useNow } from '../ui/useNow';
 import { tokenize } from '../domain/line';
 import { tagFamily } from '../domain/colour';
 import { FAMILY_NAME, feelingOf, ladderName, type Family } from '../vocab/vocab';
@@ -46,7 +47,7 @@ export type TodayProps = { now: Date; greeting: string; night: boolean; entries:
 /* Today. At night (12 to 5 am) it holds only the line, inner weather and the day overall; the rest folds into one row. */
 export function TodayView(p: TodayProps) {
   const own = p.own ?? {}, ov = p.overall ?? (p.suggested ? { ...p.suggested, set: false } : undefined), todayFamily = p.suggested?.family ?? 'calm';
-  const header = <header className="thead onwall"><div className="hrow"><div className="hdate"><h1 className="tdate">{p.now.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })}</h1></div>
+  const header = <header className="thead onwall"><div className="hrow"><div className="hdate"><h1 className="tdate">{parseDay(dayKey(p.now)).toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })}</h1></div>
     <div className="hbtns"><button type="button" className="iconbtn" aria-label="Settings" onClick={() => go({ name: 'settings' })}><Icon name="sliders" /></button></div></div><p className="voice">{p.greeting}</p></header>;
   const kept = p.entries.length ? <section className="panel"><h2 className="lbl">Kept today</h2>{[...p.entries].sort((a, b) => b.at - a.at).map(e => <div className="ent" key={e.id}>
     <div className="ent-top"><div className="ent-body"><RichText text={e.text} own={own} tagHistory={p.tagHistory} todayFamily={todayFamily} onOpenFeeling={w => p.onOpenFeeling(w, { kind: 'entry', id: e.id! })} /></div>
@@ -66,7 +67,7 @@ export function TodayView(p: TodayProps) {
   return <div className="scr"><div className="content scroll">{header}{p.writer}{kept}{weather}{p.night ? sofar : grateful}</div><Tabs current="today" /></div>;
 }
 export function Today() {
-  const now = new Date(), day = dayKey(now), undo = useUndo();
+  const now = useNow(), day = dayKey(now), undo = useUndo();
   const [open, setOpen] = useState(false), [card, setCard] = useState<{ word: string; src: FeelingSource } | null>(null), [menu, setMenu] = useState<number | null>(null);
   const remover = useRef<((w: string) => void) | null>(null);
   const data = useLiveQuery(async () => {
@@ -82,12 +83,12 @@ export function Today() {
   const suggested = suggestedOverall(data.moments);
   return <>
     <TodayView now={now} greeting={VOICES[data.settings.voice % VOICES.length].greeting} night={isNight(now)} entries={data.entries} moments={data.moments} overall={data.row?.overall} suggested={suggested} grateful={data.row?.grateful} own={data.own} tagHistory={data.tagHistory}
-      foldedOpen={open} onToggleFold={() => setOpen(!open)} onConfirmOverall={async () => { if (suggested) undo.show(await confirmOverall(db, day, suggested), `The day overall is ${FAMILY_NAME[suggested.family].toLowerCase()}.`); }}
+      foldedOpen={open} onToggleFold={() => setOpen(!open)} onConfirmOverall={async () => { if (suggested) try { undo.show(await confirmOverall(db, day, suggested), `The day overall is ${FAMILY_NAME[suggested.family].toLowerCase()}.`); } catch (e) { undo.fail(e); } }}
       onChangeOverall={() => go({ name: 'feel', when: 'day' })} onOpenFeeling={(word, src) => setCard({ word, src })} onEntryMenu={setMenu}
       writer={<LineWriter own={data.own} people={data.people} tags={data.tags} removerRef={remover} onOpenFeeling={w => setCard({ word: w, src: { kind: 'draft' } })} />} />
     {card && <FeelingCard word={card.word} src={card.src} own={data.own} onClose={() => setCard(null)} onRemoveFromDraft={w => remover.current?.(w)} />}
     {menu != null && <Sheet label="This entry" onClose={() => setMenu(null)}><p className="tdate sm">This entry</p><div className="btnrow col">
-      <button type="button" className="btn danger wide" onClick={async () => { const id = menu; setMenu(null); undo.show(await removeEntry(db, id), 'Removed.'); }}>Remove it</button>
+      <button type="button" className="btn danger wide" onClick={async () => { const id = menu; setMenu(null); try { undo.show(await removeEntry(db, id), 'Removed.'); } catch (e) { undo.fail(e); } }}>Remove it</button>
       <button type="button" className="btn primary wide" onClick={() => setMenu(null)}>Close</button></div></Sheet>}
   </>;
 }

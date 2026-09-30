@@ -11,3 +11,7 @@
 html[data-big-text] .fgrid{grid-template-columns:repeat(2, minmax(0, 1fr))}
 /* the month grid (restored: the port dropped it with the Gallery rule it shared) */
 .cal{display:grid; grid-template-columns:repeat(7, minmax(0, 1fr)); gap:2px; flex:none; margin-inline:-6px}
+/* a day with lines but no feelings named: a small neutral bar instead of a form */
+.lineonly{display:block; width:18px; height:3px; border-radius:2px; background:var(--muted); align-self:center}
+/* the Undo notice sits above the picker's pinned Keep bar instead of on it */
+body:has(.pinbar) .toast{bottom:calc(1rem * 9)}

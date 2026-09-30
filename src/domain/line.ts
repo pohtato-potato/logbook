@@ -40,3 +40,6 @@ export function removeFeelingToken(text: string, word: string): string {
   if (!t) return text;
   return (text.slice(0, t.start) + text.slice(t.end)).replace(/\s+([,.;!?])/g, '$1').replace(/\s{2,}/g, ' ').trim();
 }
+
+/* Undoing a removal from the draft: only when nothing was typed since; otherwise leave the words alone (Undo never deletes writing). */
+export function restoreDraft({ before, after, current }: { before: string; after: string; current: string }): string | null { return current === after ? before : null; }

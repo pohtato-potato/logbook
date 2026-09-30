@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type KeyboardEvent, type MutableRefObject } from 'react';
 import { db } from '../db/db';
 import { keepLine, StorageFullError } from '../db/actions';
-import { removeFeelingToken, tokenize, tokenAt } from '../domain/line';
+import { removeFeelingToken, restoreDraft, tokenize, tokenAt } from '../domain/line';
 import { feelingOf, searchFeelings, FAMILY_NAME, type Family } from '../vocab/vocab';
 import { palette, PERSON_THREADS } from '../domain/colour';
 import { MarkChip } from '../ui/Chips';
@@ -31,7 +31,11 @@ export function LineWriter({ own, people, tags, onOpenFeeling, removerRef }: { o
   const [error, setError] = useState('');
   const ta = useRef<HTMLTextAreaElement>(null), undo = useUndo(), { pal } = useLook();
   useEffect(() => { try { sessionStorage.setItem('logbook-draft', text); } catch { /* private mode: the draft just isn't remembered */ } }, [text]);
-  if (removerRef) removerRef.current = word => { const before = text; setText(removeFeelingToken(text, word)); undo.show({ label: 'Removed', run: async () => setText(before) }, `Removed ${word} from your line.`); };
+  const current = useRef(text); current.current = text;
+  if (removerRef) removerRef.current = word => {
+    const before = text, after = removeFeelingToken(text, word); let done = false; setText(after);
+    undo.show({ label: 'Removed', run: async () => { if (done) return; done = true; const back = restoreDraft({ before, after, current: current.current }); if (back !== null) setText(back); } }, `Removed ${word} from your line.`);
+  };
   const suggest = (value: string, caret: number) => {
     const m = value.slice(0, caret).match(/(^|\s)([#@:])([\p{L}\p{N}_'-]*)$/u);
     if (!m) return setSugg(null);

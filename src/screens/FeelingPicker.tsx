@@ -65,7 +65,8 @@ export function FeelingPicker({ when: startWhen, word: startWord }: { when: When
   const [s, set] = useState<{ when: When; fam: Family; word: string; strength: number; about: string; second?: Family; query: string }>(
     { when: startWhen, fam: first?.family ?? 'wistful', word: first?.w ?? '', strength: 3, about: '', query: '' });
   const patch = (x: Partial<typeof s>) => set(prev => ({ ...prev, ...x }));
-  const keep = async (another: boolean) => {
+  const keep = (another: boolean) => keepIt(another).catch(undo.fail);
+  const keepIt = async (another: boolean) => {
     const sel = findWord(s.word, own); if (!sel || s.query.trim()) return;
     if (s.when === 'day') { undo.show(await setOverall(db, dayKey(new Date()), { word: sel.w, family: s.fam, strength: s.strength }), `The day overall is now ${sel.w}.`, { carry: true }); go({ name: 'today' }); return; }
     const r = await keepMoment(db, { word: sel.w, family: s.fam, second: s.second, about: s.about || undefined, strength: s.strength, at: new Date() });
@@ -76,5 +77,5 @@ export function FeelingPicker({ when: startWhen, word: startWord }: { when: When
     onWhen={when => patch({ when })} onFam={fam => patch({ fam, word: groupsOf(fam)[0].words[0].w, about: '', second: undefined })}
     onWord={w => { const x = findWord(w, own); if (x) patch({ fam: x.family, word: x.w, about: '', query: '', ...(x.family !== s.fam ? { second: undefined } : {}) }); }}
     onStrength={strength => patch({ strength })} onAbout={about => patch({ about })} onBlend={second => patch({ second })} onQuery={query => patch({ query })}
-    onOwnWord={async (w, f) => { await addOwnWord(db, w, f); patch({ fam: f, word: w.trim().toLowerCase(), query: '' }); }} onKeep={keep} />;
+    onOwnWord={(w, f) => { addOwnWord(db, w, f).then(() => patch({ fam: f, word: w.trim().toLowerCase(), query: '' }), undo.fail); }} onKeep={keep} />;
 }
