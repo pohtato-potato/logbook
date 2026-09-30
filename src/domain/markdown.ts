@@ -5,9 +5,12 @@ import { timeLabel, timeLabelIn } from './day';
 
 const MARK_WORD = { first: 'first', gift: 'gift', priv: 'private', quiet: 'don’t bring back' } as const;
 export { plainWords };
+/* The day's files in the export, as paths relative to the zip's root. */
+export type DayFiles = { photos: { path: string; potd: boolean }[]; audio: Map<number, string> };
+const voiceLink = (e: Entry, line: string, path?: string) => (path && e.data?.kind === 'voice' ? line.replace(/^(Voice note, [0-9:]+)\./, `[$1](../../${path}).`) : line);
 const q = (s: string) => '"' + s.replace(/\\/g, '\\\\').replace(/"/g, '\\"') + '"';
 /* One day as a plain Markdown file anyone can read in ten years: front matter, then entries and feelings in time order. */
-export function dayToMarkdown(day: string, row: DayRow | undefined, entries: Entry[], moments: Moment[], lk: Lookup = EMPTY_LOOKUP): string {
+export function dayToMarkdown(day: string, row: DayRow | undefined, entries: Entry[], moments: Moment[], lk: Lookup = EMPTY_LOOKUP, files: DayFiles = { photos: [], audio: new Map() }): string {
   const fm = ['---', `date: ${day}`];
   if (row?.overall) fm.push(`overall: ${q(`${row.overall.word} (${FAMILY_NAME[row.overall.family]}, ${ladderName(row.overall.family, row.overall.strength)})`)}`);
   const tags = [...new Set(entries.flatMap(e => e.tags))], people = [...new Set(entries.flatMap(e => e.people))];
@@ -18,7 +21,7 @@ export function dayToMarkdown(day: string, row: DayRow | undefined, entries: Ent
   fm.push('---', '');
   const body: string[] = [];
   [...entries].sort((a, b) => a.at - b.at).forEach(e => {
-    body.push(`## ${timeLabelIn(e.at, e.tz)}`, '', entryLine(e, lk), '');
+    body.push(`## ${timeLabelIn(e.at, e.tz)}`, '', voiceLink(e, entryLine(e, lk), files.audio.get(e.id!)), '');
     const marks = (Object.keys(MARK_WORD) as (keyof typeof MARK_WORD)[]).filter(k => e.marks[k]).map(k => MARK_WORD[k]);
     if (marks.length) body.push(`Marks: ${marks.join(', ')}`, '');
   });
@@ -27,6 +30,7 @@ export function dayToMarkdown(day: string, row: DayRow | undefined, entries: Ent
     [...moments].sort((a, b) => a.at - b.at).forEach(m => body.push(`- ${timeLabel(new Date(m.at))}, ${m.word} (${FAMILY_NAME[m.family]}, ${ladderName(m.family, m.strength)})${m.second ? `, with ${FAMILY_NAME[m.second].toLowerCase()}` : ''}${m.about ? `, ${m.about}` : ''}`));
     body.push('');
   }
+  if (files.photos.length) { body.push('## Photos', ''); [...files.photos].sort((a, b) => Number(b.potd) - Number(a.potd)).forEach(p => body.push(`![Photo](../../${p.path})${p.potd ? ' (photo of the day)' : ''}`, '')); }
   if (row?.grateful) body.push('## Grateful for', '', row.grateful, '');
   return fm.join('\n') + body.join('\n');
 }
