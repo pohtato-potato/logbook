@@ -35,6 +35,6 @@ describe('kept cards', () => {
   it.each(['media', 'quote', 'place', 'person', 'keep', 'span', 'past', 'line'] as const)('a %s card renders its time and never undefined', kind => {
     const data = { media: { kind: 'media', media: 'Film', title: 'T', rating: 5, current: true }, quote: { kind: 'quote', who: 'A' }, place: { kind: 'place', placeId: 3, first: true }, person: { kind: 'person', who: ['A'], how: 'In person' }, keep: { kind: 'keep' }, span: { kind: 'span', spanId: 4 }, past: { kind: 'past' }, line: undefined }[kind];
     const html = renderToStaticMarkup(<KeptCard entry={e({ kind, text: 'words', data: data as Entry['data'] })} lookup={lk} own={{}} onOpenFeeling={() => {}} onMenu={() => {}} />);
-    expect(html).toContain('3:00 pm'); expect(html).not.toMatch(/undefined|NaN/);
+    expect(html).toContain(kind === 'past' ? 'Written later, on' : '3:00 pm'); expect(html).not.toMatch(/undefined|NaN/);
   });
 });

@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import type { Entry } from '../db/types';
-import { parseDay, timeLabelIn } from '../domain/day';
+import { localDate, parseDay, timeLabelIn } from '../domain/day';
 import { tokenize } from '../domain/line';
 import { tagFamily, PERSON_THREADS } from '../domain/colour';
 import { ratingText } from '../domain/rating';
@@ -50,10 +50,10 @@ export function KeptCard(p: KeptCardProps) {
     case 'keep': body = <div className="keeprow">{d.photoId != null && p.thumbs?.get(d.photoId) ? <BlobImg blob={p.thumbs.get(d.photoId)} alt="" className="photo" /> : <span className="photo" aria-hidden="true" />}<p className="entry"><b>Keepsake:</b> {e.text}</p></div>; break;
     case 'voice': body = <><p className="entry"><b>Voice note</b> · {minSec(d.seconds)}</p><BlobAudio blob={d.audio} label={`Voice note, ${minSec(d.seconds)}`} />{e.text && rich(e.text)}</>; break;
     case 'span': { const s = p.lookup.spans.get(d.spanId); body = s ? <><p className="entry"><b>Span:</b> {s.name}</p><p className="entry spanline"><i style={{ background: look.pal[s.family] }} aria-hidden="true" />{dateRange(s.from, s.to)} · {FAMILY_NAME[s.family]}</p></> : <p className="entry"><b>Span:</b> a span that was removed</p>; break; }
-    case 'past': body = <>{rich(e.text)}<p className="hint">Written later, on {longDate(new Date(e.writtenAt).toISOString().slice(0, 10))}</p></>; break;
+    case 'past': body = rich(e.text); break;
   }
   const marks = (Object.keys(MARK_LABEL) as (keyof typeof MARK_LABEL)[]).filter(k => e.marks[k] || (k === 'first' && (d?.kind === 'place' && d.first)));
   return <div className="ent"><div className="ent-top"><div className="ent-body">{body}</div>
     {p.onMenu && <button type="button" className="iconbtn sm" aria-label="Change or remove this entry" onClick={() => p.onMenu!(e.id!)}><Icon name="more" /></button>}</div>
-    <div className="ent-meta"><span>{timeLabelIn(e.at, e.tz)}</span>{marks.map(k => <span key={k} className="mpill"><Icon name={MARK_ICON[k]} />{MARK_LABEL[k]}</span>)}</div></div>;
+    <div className="ent-meta"><span>{d?.kind === 'past' ? `Written later, on ${longDate(localDate(e.writtenAt))}` : timeLabelIn(e.at, e.tz)}</span>{marks.map(k => <span key={k} className="mpill"><Icon name={MARK_ICON[k]} />{MARK_LABEL[k]}</span>)}</div></div>;
 }

@@ -1,6 +1,6 @@
 import type { LogbookDb } from './db';
 import { dayKey, timeZone } from '../domain/day';
-import { resizeImage } from '../domain/image';
+import { makePhoto, resizeImage } from '../domain/image';
 import { StorageFullError, type Undo } from './actions';
 
 export class NotAnImageError extends Error { constructor() { super('That file isn’t a photo Logbook can read. Nothing was added.'); this.name = 'NotAnImageError'; } }
@@ -11,7 +11,7 @@ async function write<T>(fn: () => Promise<T>): Promise<T> { try { return await f
 /* A photo is kept at 1600 px with a 320 px thumbnail; the original is never stored. Resizing happens before anything is written. */
 async function prepare(file: Blob, resize: Resize) {
   if (!file.type.startsWith('image/')) throw new NotAnImageError();
-  try { return { blob: await resize(file, 1600), thumb: await resize(file, 320) }; } catch { throw new NotAnImageError(); }
+  try { return resize === resizeImage ? await makePhoto(file) : { blob: await resize(file, 1600), thumb: await resize(file, 320) }; } catch { throw new NotAnImageError(); } // the real path decodes once; tests inject their own resize
 }
 /* Inside a transaction: store the photo; the day's first photo becomes its photo of the day. Returns how to take it back. */
 async function store(db: LogbookDb, day: string, p: { blob: Blob; thumb: Blob }) {

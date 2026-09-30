@@ -1,7 +1,6 @@
 """Stage 2a: ports the approved phone styles that Stage 1 left out (shelves, forms, the + sheet, person and tag pages, search)
 into src/styles/app-2a.css, with the same conversions as port-css.py. Later-stage styles stay out."""
-import re, pathlib, importlib.util
-spec = importlib.util.spec_from_file_location('p1', 'scripts/port-css.py')
+import re, pathlib
 src = pathlib.Path('design/pinboard8-source/p7-phone.css').read_text(encoding='utf-8')
 src = re.sub(r'/\*.*?\*/', '', src, flags=re.S)
 SIZE = {'--f14': '--f13', '--f15': '--f14', '--f17': '--f16', '--f20': '--f18', '--f24': '--f22', '--f30': '--f26'}

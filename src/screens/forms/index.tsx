@@ -97,6 +97,7 @@ export function SpanFormView(p: SpanState & Change<SpanState> & { error: string;
 }
 export function validPastDate(d: string, today: string): string | null {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(d)) return 'Choose a date.';
+  if (Number(d.slice(0, 4)) < 1900) return 'Choose a year from 1900 on.';
   if (d > today) return 'That date is in the future. Something from before needs a past date.';
   return null;
 }

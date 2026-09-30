@@ -13,9 +13,12 @@ export function isNight(at: Date): boolean {
   return at.getHours() < 5;
 }
 export function parseDay(day: string): Date {
-  const [y, m, d] = day.split('-').map(Number);
-  return new Date(y, m - 1, d, 12, 0, 0);
+  const [y, m, d] = day.split('-').map(Number), out = new Date(2000, 0, 1, 12, 0, 0);
+  out.setFullYear(y, m - 1, d); // setFullYear keeps years below 100 as they are
+  return out;
 }
+/* The calendar date of a moment, in local time (no 4 am rule): for "written on". */
+export const localDate = (ms: number) => { const d = new Date(ms); return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`; };
 export function addDays(day: string, n: number): string {
   const d = parseDay(day);
   d.setDate(d.getDate() + n);

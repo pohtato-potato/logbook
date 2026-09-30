@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db/db';
-import { confirmOverall, getSettings, removeEntry } from '../db/actions';
+import { confirmOverall, getSettings } from '../db/actions';
 import type { DayRow, Entry, Moment } from '../db/types';
 import { dayKey, isNight, parseDay, timeLabel } from '../domain/day';
 import { useNow } from '../ui/useNow';
@@ -16,6 +16,7 @@ import { VOICES } from '../domain/voices';
 import { LineWriter } from './LineWriter';
 import { FeelingCard, type FeelingSource } from './FeelingCard';
 import { KeptCard } from './KeptCard';
+import { EntryMenu } from './EntryMenu';
 import { BlobImg } from '../ui/Blob';
 import { addPhotos, photosMessage, removePhoto } from '../db/photos';
 import { setPhotoOfDay } from '../db/actions';
@@ -90,9 +91,7 @@ export function Today() {
       onChangeOverall={() => go({ name: 'feel', when: 'day' })} onOpenFeeling={(word, src) => setCard({ word, src })} onEntryMenu={setMenu}
       writer={<LineWriter own={data.own} people={data.people} tags={data.tags} removerRef={remover} onOpenFeeling={w => setCard({ word: w, src: { kind: 'draft' } })} />} />
     {card && <FeelingCard word={card.word} src={card.src} own={data.own} onClose={() => setCard(null)} onRemoveFromDraft={w => remover.current?.(w)} />}
-    {menu != null && <Sheet label="This entry" onClose={() => setMenu(null)}><p className="tdate sm">This entry</p><div className="btnrow col">
-      <button type="button" className="btn danger wide" onClick={async () => { const id = menu; setMenu(null); try { undo.show(await removeEntry(db, id), 'Removed.'); } catch (e) { undo.fail(e); } }}>Remove it</button>
-      <button type="button" className="btn primary wide" onClick={() => setMenu(null)}>Close</button></div></Sheet>}
+    {menu != null && <EntryMenu id={menu} onClose={() => setMenu(null)} />}
     {photoMenu != null && <Sheet label="This photo" onClose={() => setPhotoMenu(null)}><p className="tdate sm">This photo</p><div className="btnrow col">
       <button type="button" className="btn danger wide" onClick={async () => { const id = photoMenu; setPhotoMenu(null); try { undo.show(await removePhoto(db, id), 'Removed the photo.'); } catch (e) { undo.fail(e); } }}>Remove this photo</button>
       <button type="button" className="btn primary wide" onClick={() => setPhotoMenu(null)}>Close</button></div></Sheet>}

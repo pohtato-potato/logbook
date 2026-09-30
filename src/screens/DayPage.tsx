@@ -16,6 +16,7 @@ import { useLook } from '../ui/Look';
 import { suggestedOverall } from './Today';
 import { KeptCard } from './KeptCard';
 import { FeelingCard } from './FeelingCard';
+import { EntryMenu } from './EntryMenu';
 import { useState } from 'react';
 import { go } from '../router';
 
@@ -25,14 +26,14 @@ export const toDayMoments = (ms: Moment[]): DayMoment[] => [...ms].sort((a, b) =
   return { h: h < 4 ? h + 24 : h, family: m.family, second: m.second, strength: m.strength };
 });
 /* The day page: the picture on top, and the story underneath as the one place each moment is read. */
-export function DayPageView({ day, style, entries, moments, overall, own, lookup = EMPTY_LOOKUP, thumbs, onOpenFeeling }: { day: string; style: 'bloom' | 'score'; entries: Entry[]; moments: Moment[]; overall?: DayRow['overall']; own: Record<string, Family>; lookup?: Lookup; thumbs?: Map<number, Blob>; onOpenFeeling?(word: string, entryId: number): void }) {
+export function DayPageView({ day, style, entries, moments, overall, own, lookup = EMPTY_LOOKUP, thumbs, onOpenFeeling, onEntryMenu }: { day: string; style: 'bloom' | 'score'; entries: Entry[]; moments: Moment[]; overall?: DayRow['overall']; own: Record<string, Family>; lookup?: Lookup; thumbs?: Map<number, Blob>; onOpenFeeling?(word: string, entryId: number): void; onEntryMenu?(id: number): void }) {
   const look = useLook(), dms = toDayMoments(moments), ov = overall ?? (() => { const s = suggestedOverall(moments); return s ? { ...s, set: false } : undefined; })();
   const fam: Family = ov?.family ?? dms[0]?.family ?? 'calm';
   const items: { at: number; node: ReactNode }[] = [
     ...moments.map(m => ({ at: m.at, node: <div className="st-item" key={'m' + m.id}><Form family={m.family} second={m.second} label={FAMILY_NAME[m.family]} /><div className="st-body">
       <p className="st-time">{timeLabel(new Date(m.at))}</p><p className="st-word">{m.word}{m.about && <span> {m.about}</span>}</p>
       <p className="st-wx">{FAMILY_NAME[m.family]}{m.second ? ` with ${FAMILY_NAME[m.second].toLowerCase()}` : ''}, like {ladderName(m.family, m.strength).toLowerCase()}</p></div></div> })),
-    ...entries.map(e => ({ at: e.at + 1, node: <div className="st-item" key={'e' + e.id}><span aria-hidden="true" /><div className="st-body"><KeptCard entry={e} lookup={lookup} own={own} thumbs={thumbs} onOpenFeeling={w => onOpenFeeling?.(w, e.id!)} onOpenTag={tag => go({ name: 'tag', tag })} onOpenPerson={i => go({ name: 'person', id: lookup.people.get(i)?.id ?? i.toLowerCase() })} /></div></div> })),
+    ...entries.map(e => ({ at: e.at + 1, node: <div className="st-item" key={'e' + e.id}><span aria-hidden="true" /><div className="st-body"><KeptCard entry={e} lookup={lookup} own={own} thumbs={thumbs} onMenu={onEntryMenu} onOpenFeeling={w => onOpenFeeling?.(w, e.id!)} onOpenTag={tag => go({ name: 'tag', tag })} onOpenPerson={i => go({ name: 'person', id: lookup.people.get(i)?.id ?? i.toLowerCase() })} /></div></div> })),
   ].sort((a, b) => a.at - b.at);
   const empty = !moments.length && !entries.length;
   return <div className={'scr' + (style === 'score' ? ' ds-score' : '')}><div className="content scroll">
@@ -50,13 +51,14 @@ export function DayPageView({ day, style, entries, moments, overall, own, lookup
   </div><Tabs current="cal" /></div>;
 }
 export function DayPage({ day }: { day: string }) {
-  const [card, setCard] = useState<{ word: string; id: number } | null>(null);
+  const [card, setCard] = useState<{ word: string; id: number } | null>(null), [menu, setMenu] = useState<number | null>(null);
   const data = useLiveQuery(async () => ({
     entries: await db.entries.where('day').equals(day).toArray(), moments: await db.moments.where('day').equals(day).toArray(), row: await db.days.get(day), settings: await getSettings(db),
     own: Object.fromEntries((await db.words.toArray()).map(w => [w.word, w.family])) as Record<string, Family>, lookup: await loadLookup(db),
     thumbs: new Map((await db.photos.where('day').equals(day).toArray()).map(ph => [ph.id!, ph.thumb])),
   }), [day]);
   if (!data) return <div className="scr" />;
-  return <><DayPageView day={day} style={data.settings.dayStyle} entries={data.entries} moments={data.moments} overall={data.row?.overall} own={data.own} lookup={data.lookup} thumbs={data.thumbs} onOpenFeeling={(word, id) => setCard({ word, id })} />
+  return <><DayPageView day={day} style={data.settings.dayStyle} entries={data.entries} moments={data.moments} overall={data.row?.overall} own={data.own} lookup={data.lookup} thumbs={data.thumbs} onOpenFeeling={(word, id) => setCard({ word, id })} onEntryMenu={setMenu} />
+    {menu != null && <EntryMenu id={menu} onClose={() => setMenu(null)} />}
     {card && <FeelingCard word={card.word} src={{ kind: 'entry', id: card.id }} own={data.own} onClose={() => setCard(null)} />}</>;
 }
