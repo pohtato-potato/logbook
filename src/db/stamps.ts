@@ -15,19 +15,26 @@ export async function placesOn(db: LogbookDb, day: string) {
   const ids = (await db.entries.where('day').equals(day).toArray()).flatMap(e => (e.data?.kind === 'place' ? [e.data.placeId] : []));
   return (await db.places.bulkGet(ids)).flatMap(p => (p?.lat != null && p.lon != null ? [{ lat: p.lat, lon: p.lon }] : []));
 }
-/* Fills a day's weather and air when they are missing or stale. Never blocks, never throws; what it could not get waits for next time. */
+const r2 = (x: number) => Math.round(x * 100) / 100;
+/* Fills a day's weather and air when they are missing, stale, or were fetched for a different place (each stamp remembers its rough position).
+   Never blocks, never throws; what it could not get waits for next time. Stops asking the moment the source is switched off. */
 export async function ensureStamps(db: LogbookDb, day: string, now: Date, get: FetchJson): Promise<'ok' | 'off' | 'no-place' | 'offline'> {
   try {
-    const settings = await getSettings(db); if (!sourcesOf(settings).weather) return 'off';
+    const on = async () => sourcesOf(await getSettings(db)).weather;
+    const where = async () => dayPosition(day, (await db.days.get(day))?.stamps, await placesOn(db, day), (await getSettings(db)).homes);
+    if (!(await on())) return 'off';
     const row = await db.days.get(day), st: DayStamps = row?.stamps ?? {}, today = dayKey(now), final = day <= addDays(today, -2);
-    const pos = dayPosition(day, st, await placesOn(db, day), settings.homes); if (!pos) return 'no-place';
-    const want = (x?: { final: boolean; at: number }) => !x || (!x.final && now.getTime() - x.at > STALE);
+    const pos = await where(); if (!pos) return 'no-place';
+    const at = { lat: r2(pos.lat), lon: r2(pos.lon) }, here = (x?: { lat?: number; lon?: number }) => x?.lat === at.lat && x?.lon === at.lon;
+    const want = (x?: { final: boolean; at: number; lat?: number; lon?: number }) => !x || !here(x) || (!x.final && now.getTime() - x.at > STALE);
     const next: DayStamps = {}; let failed = false;
     const wu = want(st.weather) ? weatherUrl(day, pos.lat, pos.lon, today) : null;
-    if (wu) { try { const w = parseWeather(await get(wu)); if (w) next.weather = { ...w, final, at: now.getTime() }; else failed = true; } catch { failed = true; } }
+    if (wu) { try { const w = parseWeather(await get(wu)); if (w) next.weather = { ...w, final, at: now.getTime(), ...at }; else failed = true; } catch { failed = true; } }
+    if (!(await on())) return 'off'; // switched off: ask nothing more
     const au = want(st.air) ? airUrl(day, pos.lat, pos.lon, today) : null;
-    if (au) { try { const h = parseAir(await get(au)), a = h && indianAqi(h); if (a) next.air = { ...a, final, at: now.getTime() }; else if (!h) failed = true; } catch { failed = true; } }
-    if (!sourcesOf(await getSettings(db)).weather) return 'off'; // switched off while we were asking: drop the answer
+    if (au) { try { const h = parseAir(await get(au)), a = h && indianAqi(h); if (a) next.air = { ...a, final, at: now.getTime(), ...at }; else if (!h) failed = true; } catch { failed = true; } }
+    if (!(await on())) return 'off'; // switched off while we were asking: drop the answer
+    const nowPos = await where(); if (!nowPos || r2(nowPos.lat) !== at.lat || r2(nowPos.lon) !== at.lon) return 'ok'; // the place changed meanwhile: these answers are for the old one
     await db.transaction('rw', db.days, async () => {
       const cur = (await db.days.get(day)) ?? { day }, stamps: DayStamps = { ...cur.stamps, ...next };
       if (failed) stamps.pending = true; else delete stamps.pending;

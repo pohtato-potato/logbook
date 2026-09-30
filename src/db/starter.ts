@@ -19,7 +19,12 @@ export function parseStarter(text: string): Starter {
     if (typeof p.name !== 'string' || !p.name.trim()) throw new StarterError(`In the starter file, person ${i + 1} has no name. Nothing was changed.`);
     if (p.thread !== undefined && typeof p.thread !== 'number') throw new StarterError(`In the starter file, person ${i + 1}’s thread must be a number. Nothing was changed.`);
   });
-  homes.forEach((h, i) => { if (!h || !h.name || typeof h.lat !== 'number' || typeof h.lon !== 'number' || !h.from) throw new StarterError(`In the starter file, home ${i + 1} needs a name, lat, lon and from. Nothing was changed.`); });
+  const date = (d: unknown) => typeof d === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(d);
+  homes.forEach((h, i) => {
+    if (!h || !h.name || typeof h.lat !== 'number' || typeof h.lon !== 'number' || !h.from) throw new StarterError(`In the starter file, home ${i + 1} needs a name, lat, lon and from. Nothing was changed.`);
+    if (!date(h.from) || (h.to !== undefined && !date(h.to))) throw new StarterError(`In the starter file, home ${i + 1}’s dates must look like 2019-06-01. Nothing was changed.`);
+    if (!(Math.abs(h.lat) <= 90) || !(Math.abs(h.lon) <= 180)) throw new StarterError(`In the starter file, home ${i + 1}’s lat must be between -90 and 90, and lon between -180 and 180. Nothing was changed.`);
+  });
   return { format: 'logbook-starter', version: 1, people, homes, lastfm: s.lastfm, googleClientId: s.googleClientId };
 }
 export async function applyStarter(db: LogbookDb, s: Starter): Promise<void> {
