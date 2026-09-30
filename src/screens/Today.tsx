@@ -28,13 +28,8 @@ import { EMPTY_LOOKUP, type Lookup } from '../domain/entryText';
 import { loadLookup } from '../db/lookup';
 
 export { Form } from '../ui/Form';
-/* The day overall, suggested from the most-felt family and its latest word, until it's set. */
-export function suggestedOverall(moments: Moment[]) {
-  if (!moments.length) return undefined;
-  const n = new Map<Family, number>(); moments.forEach(m => n.set(m.family, (n.get(m.family) ?? 0) + 1));
-  const top = [...n.entries()].sort((a, b) => b[1] - a[1])[0][0], latest = [...moments].filter(m => m.family === top).sort((a, b) => b.at - a.at)[0];
-  return { word: latest.word, family: top, strength: 3 };
-}
+import { suggestedOverall } from '../domain/looking';
+export { suggestedOverall };
 export { RichText } from './KeptCard';
 export type TodayProps = { now: Date; greeting: string; night: boolean; entries: Entry[]; moments: Moment[]; overall?: DayRow['overall']; suggested?: { word: string; family: Family; strength: number }; grateful?: string; foldedOpen: boolean;
   own?: Record<string, Family>; tagHistory?: Record<string, Family[]>; lookup?: Lookup; thumbs?: Map<number, Blob>;
