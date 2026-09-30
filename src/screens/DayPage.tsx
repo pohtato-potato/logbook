@@ -17,6 +17,8 @@ import { suggestedOverall } from './Today';
 import { KeptCard } from './KeptCard';
 import { FeelingCard } from './FeelingCard';
 import { EntryMenu } from './EntryMenu';
+import { maskMoments } from '../domain/looking';
+import { usePrivacy } from '../ui/Privacy';
 import { StampsPanelView, type StampsProps } from './Stamps';
 import { useStamps } from '../ui/useStamps';
 import { useState } from 'react';
@@ -54,6 +56,7 @@ export function DayPageView({ day, style, entries, moments, overall, own, lookup
   </div><Tabs current="cal" /></div>;
 }
 export function DayPage({ day }: { day: string }) {
+  const { locked } = usePrivacy();
   const [card, setCard] = useState<{ word: string; id: number } | null>(null), [menu, setMenu] = useState<number | null>(null), [open, setOpen] = useState(false), st = useStamps(day);
   const data = useLiveQuery(async () => ({
     entries: await db.entries.where('day').equals(day).toArray(), moments: await db.moments.where('day').equals(day).toArray(), row: await db.days.get(day), settings: await getSettings(db),
@@ -61,7 +64,7 @@ export function DayPage({ day }: { day: string }) {
     thumbs: new Map((await db.photos.where('day').equals(day).toArray()).map(ph => [ph.id!, ph.thumb])),
   }), [day]);
   if (!data) return <div className="scr" />;
-  return <><DayPageView day={day} style={data.settings.dayStyle} entries={data.entries} moments={data.moments} overall={data.row?.overall} own={data.own} lookup={data.lookup} thumbs={data.thumbs} onOpenFeeling={(word, id) => setCard({ word, id })} onEntryMenu={setMenu}
+  return <><DayPageView day={day} style={data.settings.dayStyle} entries={data.entries} moments={maskMoments(data.moments, data.entries, locked)} overall={data.row?.overall} own={data.own} lookup={data.lookup} thumbs={data.thumbs} onOpenFeeling={(word, id) => setCard({ word, id })} onEntryMenu={setMenu}
       stamps={{ list: st.list, status: st.status, open, onToggle: () => setOpen(!open), onWhere: () => {}, canLocate: false, placeSource: st.pos?.source, isToday: false }} />
     {menu != null && <EntryMenu id={menu} onClose={() => setMenu(null)} />}
     {card && <FeelingCard word={card.word} src={{ kind: 'entry', id: card.id }} own={data.own} onClose={() => setCard(null)} />}</>;

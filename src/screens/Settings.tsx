@@ -49,7 +49,8 @@ export function SettingsView(p: SettingsProps) {
       <Row title="Lock private entries" sub={p.lockSupported === false ? 'This phone’s browser can’t use your fingerprint or PIN here.' : 'Unlock with your phone’s fingerprint or PIN.'}>
         <button type="button" role="switch" aria-checked={!!s.lock} aria-label="Lock private entries" disabled={p.lockSupported === false && !s.lock} className={'btn sm' + (s.lock ? ' primary' : '')} onClick={() => p.onLock?.(!s.lock)}>{s.lock ? 'On' : 'Off'}</button></Row>
       <p className="hint">This hides private entries inside Logbook. It isn’t encryption: your phone’s own lock protects the data.</p>
-      {s.lock && <button type="button" className="btn ghost wide" onClick={p.onResetLock}>Set up the lock again</button>}</section>
+      {s.lock && p.lockSupported !== false && <button type="button" className="btn ghost wide" onClick={p.onResetLock}>Set up the lock again</button>}
+      {s.lock && p.lockSupported === false && <p className="hint">This phone can’t use a fingerprint or PIN here any more. You can turn the lock off.</p>}</section>
     <section className="panel"><h2 className="lbl">Outside sources</h2>
       <Row title="Weather and air" sub="From Open-Meteo. Sends the day’s rough position (about 1 km), nothing else."><Switch on={sourcesOf(s).weather} label="Weather and air" onFlip={() => p.onSource?.('weather', !sourcesOf(s).weather)} /></Row>
       <Row title="Place names" sub="From OpenStreetMap, only when you tap Suggest. Sends where you are (about 100 m)."><Switch on={sourcesOf(s).places} label="Place names" onFlip={() => p.onSource?.('places', !sourcesOf(s).places)} /></Row>
@@ -71,7 +72,10 @@ export function Settings() {
   return <SettingsView settings={settings} message={message} lockSupported={supported}
     onLock={on => void act(async () => {
       if (on) { if (!(await lockSupport())) { setMessage('This phone’s browser can’t use your fingerprint or PIN here.'); return; } await newLock(); setMessage('Private entries are locked now.'); }
-      else { if (!(await privacy.unlock())) return; await saveSettings(db, { lock: undefined }); setMessage('The lock is off. Private entries show as usual.'); } })()}
+      else {
+        if (!(await lockSupport())) { if (!confirm('This phone can’t use a fingerprint or PIN here any more. Turn the lock off? Private entries will show as usual.')) return; }
+        else if (privacy.locked && !(await privacy.unlock())) return;
+        await saveSettings(db, { lock: undefined }); setMessage('The lock is off. Private entries show as usual.'); } })()}
     onResetLock={() => void act(async () => { await newLock(); setMessage('The lock is set up again.'); })()}
     onVoice={voice => void saveSettings(db, { voice })} onDayStyle={dayStyle => void saveSettings(db, { dayStyle })} onTheme={theme => void saveSettings(db, { theme })} onMotion={motion => void saveSettings(db, { motion })}
     onExport={act(async () => { if (!(await opened())) return; if (!(await saveFile(await makeMarkdownZip(db), `logbook-export-${today}.zip`))) return; await saveSettings(db, { lastExport: Date.now() }); setMessage('Exported. The zip holds one Markdown file per day.'); })}

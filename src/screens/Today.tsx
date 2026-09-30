@@ -28,12 +28,13 @@ import { EMPTY_LOOKUP, type Lookup } from '../domain/entryText';
 import { loadLookup } from '../db/lookup';
 
 export { Form } from '../ui/Form';
-import { suggestedOverall } from '../domain/looking';
+import { maskMoments, PRIVATE_FEELING, suggestedOverall, visibleTags } from '../domain/looking';
+import { usePrivacy } from '../ui/Privacy';
 export { suggestedOverall };
 export { RichText } from './KeptCard';
 export type TodayProps = { now: Date; greeting: string; night: boolean; entries: Entry[]; moments: Moment[]; overall?: DayRow['overall']; suggested?: { word: string; family: Family; strength: number }; grateful?: string; foldedOpen: boolean;
   own?: Record<string, Family>; tagHistory?: Record<string, Family[]>; lookup?: Lookup; thumbs?: Map<number, Blob>;
-  stamps?: StampsProps;
+  stamps?: StampsProps; onUnlock?(): void;
   photos?: { id: number; thumb: Blob }[]; potd?: number; onPickPhotos?(files: File[]): void; onPotd?(id: number): void; onPhotoMenu?(id: number): void;
   onToggleFold(): void; onConfirmOverall(): void; onChangeOverall(): void; onOpenFeeling(word: string, src: FeelingSource): void; onEntryMenu(id: number): void; writer: ReactNode };
 /* Today. At night (12 to 5 am) it holds only the line, inner weather and the day overall; the rest folds into one row. */
@@ -44,7 +45,7 @@ export function TodayView(p: TodayProps) {
   const kept = p.entries.length ? <section className="panel"><h2 className="lbl">Kept today</h2>{[...p.entries].sort((a, b) => b.at - a.at).map(e => <KeptCard key={e.id} entry={e} lookup={p.lookup ?? EMPTY_LOOKUP} own={own} thumbs={p.thumbs} tagHistory={p.tagHistory} todayFamily={todayFamily}
     onOpenFeeling={w => p.onOpenFeeling(w, { kind: 'entry', id: e.id! })} onOpenTag={tag => go({ name: 'tag', tag })} onOpenPerson={i => go({ name: 'person', id: p.lookup?.people.get(i)?.id ?? i.toLowerCase() })} onMenu={p.onEntryMenu} />)}</section> : null;
   const weather = <section className="panel" aria-labelledby="h-weather"><h2 className="lbl" id="h-weather">Inner weather</h2>
-    {p.moments.length ? <div className="moms" role="list">{[...p.moments].sort((a, b) => a.at - b.at).map(m => <button key={m.id} type="button" className="mom" onClick={() => p.onOpenFeeling(m.word, { kind: 'moment', id: m.id! })} aria-label={`${timeLabel(new Date(m.at))}, ${m.word}. Open its card`}>
+    {p.moments.length ? <div className="moms" role="list">{[...p.moments].sort((a, b) => a.at - b.at).map(m => <button key={m.id} type="button" className="mom" onClick={() => (m.word === PRIVATE_FEELING ? p.onUnlock?.() : p.onOpenFeeling(m.word, { kind: 'moment', id: m.id! }))} aria-label={`${timeLabel(new Date(m.at))}, ${m.word}. Open its card`}>
       <Form family={m.family} second={m.second} label={FAMILY_NAME[m.family]} /><b>{timeLabel(new Date(m.at)).replace(/ (am|pm)/, '')}</b><i>{m.word}</i></button>)}</div>
       : <p className="hint">No feelings yet today. Add one below, or type : in your line.</p>}
     <button type="button" className="btn wide" onClick={() => go({ name: 'feel', when: 'now' })}><Icon name="plus" />Add a feeling</button>
@@ -68,14 +69,14 @@ export function TodayView(p: TodayProps) {
 }
 const skippedFirstRun = () => { try { return !!localStorage.getItem('logbook-first-run-skipped'); } catch { return false; } };
 export function Today() {
-  const now = useNow(), day = dayKey(now), undo = useUndo(), st = useStamps(day), [stampsOpen, setStampsOpen] = useState(false);
+  const now = useNow(), day = dayKey(now), undo = useUndo(), privacy = usePrivacy(), st = useStamps(day), [stampsOpen, setStampsOpen] = useState(false);
   const [open, setOpen] = useState(false), [card, setCard] = useState<{ word: string; src: FeelingSource } | null>(null), [menu, setMenu] = useState<number | null>(null), [photoMenu, setPhotoMenu] = useState<number | null>(null);
   const remover = useRef<((w: string) => void) | null>(null);
   const data = useLiveQuery(async () => {
     const [entries, moments, all, allMoments] = await Promise.all([db.entries.where('day').equals(day).toArray(), db.moments.where('day').equals(day).toArray(), db.entries.toArray(), db.moments.toArray()]);
     const byDay: Record<string, Family[]> = {}; allMoments.forEach(m => (byDay[m.day] ??= []).push(m.family));
     const tagHistory: Record<string, Family[]> = {}; all.forEach(e => e.tags.forEach(t => (tagHistory[t] ??= []).push(...(byDay[e.day] ?? []))));
-    return { entries, moments, tagHistory, row: await db.days.get(day), settings: await getSettings(db), people: await db.people.toArray(), tags: (await db.tags.toArray()).map(t => t.name),
+    return { entries, all, moments, tagHistory, row: await db.days.get(day), settings: await getSettings(db), people: await db.people.toArray(), tags: (await db.tags.toArray()).map(t => t.name),
       own: Object.fromEntries((await db.words.toArray()).map(w => [w.word, w.family])) as Record<string, Family>, lookup: await loadLookup(db),
       photos: (await db.photos.where('day').equals(day).toArray()).sort((a, b) => a.addedAt - b.addedAt).map(ph => ({ id: ph.id!, thumb: ph.thumb })) };
   }, [day]);
@@ -84,7 +85,7 @@ export function Today() {
   if (!data || needsFirstRun) return <div className="scr" />;
   const suggested = suggestedOverall(data.moments);
   return <>
-    <TodayView now={now} greeting={VOICES[data.settings.voice % VOICES.length].greeting} night={isNight(now)} entries={data.entries} moments={data.moments} overall={data.row?.overall} suggested={suggested} grateful={data.row?.grateful} own={data.own} tagHistory={data.tagHistory} lookup={data.lookup}
+    <TodayView now={now} greeting={VOICES[data.settings.voice % VOICES.length].greeting} night={isNight(now)} entries={data.entries} moments={maskMoments(data.moments, data.entries, privacy.locked)} onUnlock={() => void privacy.unlock()} overall={data.row?.overall} suggested={suggested} grateful={data.row?.grateful} own={data.own} tagHistory={data.tagHistory} lookup={data.lookup}
       stamps={{ list: st.list, status: st.status, open: stampsOpen, onToggle: () => setStampsOpen(!stampsOpen), canLocate: typeof navigator !== 'undefined' && 'geolocation' in navigator, placeSource: st.pos?.source,
         onWhere: () => navigator.geolocation.getCurrentPosition(async p => { try { undo.show(await addWhereToday(db, day, { lat: roundCoord(p.coords.latitude), lon: roundCoord(p.coords.longitude) }), 'Added where you are today.'); st.refresh(); } catch (e) { undo.fail(e); } },
           () => undo.fail(Object.assign(new Error(data.settings.homes.length ? 'Logbook couldn’t get your position. Weather uses your home instead.' : 'Logbook couldn’t get your position.'), { name: 'PlainMessage' })), { maximumAge: 60_000, timeout: 15_000 }) }}
@@ -94,7 +95,7 @@ export function Today() {
       onPotd={async id => { try { undo.show(await setPhotoOfDay(db, day, id), 'That’s the photo of the day now.'); } catch (e) { undo.fail(e); } }} onPhotoMenu={setPhotoMenu}
       foldedOpen={open} onToggleFold={() => setOpen(!open)} onConfirmOverall={async () => { if (suggested) try { undo.show(await confirmOverall(db, day, suggested), `The day overall is ${FAMILY_NAME[suggested.family].toLowerCase()}.`); } catch (e) { undo.fail(e); } }}
       onChangeOverall={() => go({ name: 'feel', when: 'day' })} onOpenFeeling={(word, src) => setCard({ word, src })} onEntryMenu={setMenu}
-      writer={<LineWriter own={data.own} people={data.people} tags={data.tags} removerRef={remover} onOpenFeeling={w => setCard({ word: w, src: { kind: 'draft' } })} />} />
+      writer={<LineWriter own={data.own} people={data.people} tags={visibleTags(data.tags, data.all, privacy.locked)} removerRef={remover} onOpenFeeling={w => setCard({ word: w, src: { kind: 'draft' } })} />} />
     {card && <FeelingCard word={card.word} src={card.src} own={data.own} onClose={() => setCard(null)} onRemoveFromDraft={w => remover.current?.(w)} />}
     {menu != null && <EntryMenu id={menu} onClose={() => setMenu(null)} />}
     {photoMenu != null && <Sheet label="This photo" onClose={() => setPhotoMenu(null)}><p className="tdate sm">This photo</p><div className="btnrow col">

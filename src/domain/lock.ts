@@ -1,6 +1,6 @@
 /* The private lock: the phone's own fingerprint or PIN, through a passkey that never leaves it.
    There is no server, so nothing is sent anywhere; this only asks the phone to confirm it's the owner. It hides, it doesn't encrypt. */
-export class LockError extends Error { constructor() { super('Logbook couldn’t use your fingerprint or PIN.'); this.name = 'PlainMessage'; } }
+export class LockError extends Error { constructor() { super('Logbook couldn’t use your fingerprint or PIN. If this phone can’t any more, you can turn the lock off in Settings.'); this.name = 'PlainMessage'; } }
 export type Creds = { create(o: CredentialCreationOptions): Promise<Credential | null>; get(o: CredentialRequestOptions): Promise<Credential | null> };
 const b64u = (b: ArrayBuffer) => btoa(String.fromCharCode(...new Uint8Array(b))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 const unb64u = (s: string) => Uint8Array.from(atob(s.replace(/-/g, '+').replace(/_/g, '/') + '==='.slice((s.length + 3) % 4)), c => c.charCodeAt(0));

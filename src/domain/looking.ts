@@ -107,3 +107,16 @@ export function maskPrivate(entries: Entry[], locked: boolean): Entry[] {
     return { ...e, text: PRIVATE_TEXT, tags: [], data };
   });
 }
+/* While locked, a feeling from a private line keeps its form (so the day's shape stays honest) but not its words. */
+export const PRIVATE_FEELING = 'a private feeling';
+export function maskMoments(moments: Moment[], entries: Entry[], locked: boolean): Moment[] {
+  if (!locked) return moments;
+  const hidden = new Set(entries.filter(e => e.marks.priv).map(e => e.id));
+  return moments.map(m => { if (m.entryId == null || !hidden.has(m.entryId)) return m; const out = { ...m, word: PRIVATE_FEELING }; delete out.about; return out; });
+}
+/* While locked, a tag used only on private lines isn't listed anywhere. */
+export function visibleTags(tags: string[], entries: Entry[], locked: boolean): string[] {
+  if (!locked) return tags;
+  const priv = new Set(entries.filter(e => e.marks.priv).flatMap(e => e.tags)), open = new Set(entries.filter(e => !e.marks.priv).flatMap(e => e.tags));
+  return tags.filter(t => open.has(t) || !priv.has(t));
+}

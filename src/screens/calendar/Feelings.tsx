@@ -59,7 +59,7 @@ export function Feelings({ month, locked = false }: { month: string; locked?: bo
     const [moments, rows, entries, people] = await Promise.all([db.moments.where('day').between(first, last, true, true).toArray(), db.days.where('day').between(first, last, true, true).toArray(), db.entries.where('day').between(first, last, true, true).toArray(), db.people.toArray()]);
     const hidden = new Set(entries.filter(e => e.marks.priv).map(e => e.id)), shown = locked ? moments.filter(m => m.entryId == null || !hidden.has(m.entryId)) : moments;
     const fams = dayFamilies(moments, rows);
-    return { moments, stats: monthStats(month, moments), words: wordCounts(shown), mix: hourMix(moments), often: oftenWith(entries, fams).map(o => ({ ...o, families: o.families.length ? o.families : [tagFamily(o.tag, {}, 'calm')] })), withPeople: peopleWith(entries, fams, people) };
+    return { moments, stats: monthStats(month, moments), words: wordCounts(shown), mix: hourMix(moments), often: oftenWith(locked ? entries.filter(e => !e.marks.priv) : entries, fams).map(o => ({ ...o, families: o.families.length ? o.families : [tagFamily(o.tag, {}, 'calm')] })), withPeople: peopleWith(entries, fams, people) };
   }, [month, locked]);
   if (!d) return null;
   const daysWith = !sel ? [] : [...new Set(d.moments.filter(m => (sel.kind === 'fam' ? m.family === sel.key || m.second === sel.key : m.word === sel.key || !!m.about?.split(/, | /).includes(sel.key))).map(m => m.day))].sort();

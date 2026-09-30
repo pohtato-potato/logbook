@@ -15,6 +15,7 @@ import { go } from '../router';
 import { RichText } from './KeptCard';
 import { FeelingCard } from './FeelingCard';
 import { usePrivacy } from '../ui/Privacy';
+import { visibleTags } from '../domain/looking';
 
 const long = (d: string) => parseDay(d).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
 /* Lines, #tags, @people and feelings, as you type. Results are announced; each opens its day, page or card. */
@@ -46,6 +47,6 @@ export function Search() {
       own: Object.fromEntries((await db.words.toArray()).map(w => [w.word, w.family])) as Record<string, Family> };
   }, []);
   if (!d) return <div className="scr" />;
-  return <><SearchView q={q} results={searchAll(q, { ...d, locked })} locked={locked} lookup={d.lookup} tagFamilies={d.tagFamilies} onQ={setQ} onFeeling={setCard} />
+  return <><SearchView q={q} results={searchAll(q, { ...d, tags: visibleTags(d.tags, d.entries, locked), locked })} locked={locked} lookup={d.lookup} tagFamilies={d.tagFamilies} onQ={setQ} onFeeling={setCard} />
     {card && <FeelingCard word={card} src={{ kind: 'none' }} own={d.own} onClose={() => setCard(null)} />}</>;
 }
