@@ -12,6 +12,14 @@ import { DayPageView } from '../src/screens/DayPage';
 import { SHELF_IDS } from '../src/router';
 import { OutsideLine, StampsPanelView } from '../src/screens/Stamps';
 import { stampList } from '../src/domain/stamps';
+import { GalleryView } from '../src/screens/calendar/Gallery';
+import { YearView } from '../src/screens/calendar/Year';
+import { LifeView } from '../src/screens/calendar/Life';
+import { FeelingsView } from '../src/screens/calendar/Feelings';
+import { CalendarView } from '../src/screens/Calendar';
+import { PrivacyContext } from '../src/ui/Privacy';
+import { KeptCard } from '../src/screens/KeptCard';
+import { dayFamilies, hourMix, lifeItems, monthStats, oftenWith, peopleWith, wordCounts, yearDays } from '../src/domain/looking';
 import type { Entry, Person, Place, Span } from '../src/db/types';
 
 const noop = () => {};
@@ -57,6 +65,23 @@ describe('every Stage 2a screen renders cleanly, empty and full', () => {
       expect(renderToStaticMarkup(<OutsideLine list={list} />)).not.toMatch(bad);
     }
     expect(Object.fromEntries(lists[0])['Sun']).toBe('The sun doesn’t set today');
+  });
+  it('the calendar tabs and the lock, empty and full, locked and unlocked', () => {
+    const ms = [{ id: 1, day: '2026-09-20', at: new Date('2026-09-20T09:00:00').getTime(), word: 'calm', family: 'calm' as const, strength: 3, about: 'then tired' }];
+    const fams = dayFamilies(ms, []);
+    for (const [moments, es] of [[ms, entries], [[], []]] as const) {
+      const f = dayFamilies([...moments], []);
+      const html = [
+        renderToStaticMarkup(<GalleryView month="2026-09" today="2026-09-29" cells={moments.length ? { '2026-09-20': { overall: 'calm', moments: [{ h: 9, family: 'calm', strength: 3 }] } } : {}} onOpen={noop} />),
+        ...(['ring', 'pixels'] as const).flatMap(style => [null, 0, 262, 364].map(pick => renderToStaticMarkup(<YearView year={2026} today="2026-09-29" days={yearDays(2026, f)} style={style} pick={pick} onStyle={noop} onPick={noop} onYear={noop} onOpen={noop} wordsOf={() => []} />))),
+        ...[true, false].map(locked => renderToStaticMarkup(<LifeView items={lifeItems([...es], spans, [], lookup, locked, f)} onAdd={noop} locked={locked} />)),
+        renderToStaticMarkup(<FeelingsView month="2026-09" stats={monthStats('2026-09', [...moments])} words={wordCounts([...moments])} mix={hourMix([...moments])} often={oftenWith([...es], f)} withPeople={peopleWith([...es], f, [A])} sel={{ kind: 'fam', key: 'calm' }} onSel={noop} daysWith={[]} />),
+        ...(['days', 'gallery', 'year', 'life', 'feelings'] as const).map(tab => renderToStaticMarkup(<CalendarView month="2026-09" today="2026-09-29" tab={tab} days={{}} spans={spans} open={null} onOpen={noop} onMonth={noop}><p /></CalendarView>)),
+        ...[true, false].map(locked => renderToStaticMarkup(<PrivacyContext.Provider value={{ enabled: true, locked, unlock: async () => true, lockNow: noop }}>{es.map(e => <KeptCard key={e.id} entry={{ ...e, marks: { ...e.marks, priv: true } }} lookup={lookup} own={{}} onOpenFeeling={noop} />)}</PrivacyContext.Provider>)),
+      ];
+      html.forEach(h => expect(h).not.toMatch(/undefined|NaN|Infinity|\[object Object\]/));
+    }
+    expect(fams.size).toBe(1);
   });
 });
 
