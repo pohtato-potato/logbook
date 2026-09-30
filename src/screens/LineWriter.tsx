@@ -88,7 +88,7 @@ export function LineWriter({ own, people, tags, onOpenFeeling, removerRef }: { o
         onChange={e => { setText(e.target.value); suggest(e.target.value, e.target.selectionStart); }} onClick={onClick} onKeyDown={onKeyDown}
         onScroll={e => { const hl = e.currentTarget.previousElementSibling as HTMLElement | null; if (hl) hl.scrollTop = e.currentTarget.scrollTop; }}
         onBlur={() => setTimeout(() => setSugg(null), 150)} />
-      {sugg && <div className="sugg">{sugg.items.map(s => <button key={s.insert + s.label} type="button" onMouseDown={e => e.preventDefault()} onClick={() => apply(s)}>
+      {sugg && <div className="sugg">{sugg.items.map((s, i) => <button key={i + s.insert} type="button" onMouseDown={e => e.preventDefault()} onClick={() => apply(s)}>
         {s.family ? <i className="sdot" style={{ background: pal[s.family] }} /> : <i className="sdot ring" />}<span>{s.label}{s.note && <small>{s.note}</small>}</span></button>)}</div>}
     </div>
     <p className="hint" id="h-hint">Type # for a tag, @ for a person, : for a feeling. Tap a feeling to see its card.</p>
