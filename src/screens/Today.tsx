@@ -3,7 +3,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db/db';
 import { confirmOverall, getSettings, removeEntry } from '../db/actions';
 import type { DayRow, Entry, Moment } from '../db/types';
-import { dayKey, isNight, parseDay, timeLabel } from '../domain/day';
+import { dayKey, isNight, parseDay, timeLabel, timeLabelIn } from '../domain/day';
 import { useNow } from '../ui/useNow';
 import { tokenize } from '../domain/line';
 import { tagFamily } from '../domain/colour';
@@ -52,7 +52,7 @@ export function TodayView(p: TodayProps) {
   const kept = p.entries.length ? <section className="panel"><h2 className="lbl">Kept today</h2>{[...p.entries].sort((a, b) => b.at - a.at).map(e => <div className="ent" key={e.id}>
     <div className="ent-top"><div className="ent-body"><RichText text={e.text} own={own} tagHistory={p.tagHistory} todayFamily={todayFamily} onOpenFeeling={w => p.onOpenFeeling(w, { kind: 'entry', id: e.id! })} /></div>
       <button type="button" className="iconbtn sm" aria-label="Change or remove this entry" onClick={() => p.onEntryMenu(e.id!)}><Icon name="more" /></button></div>
-    <div className="ent-meta"><span>{timeLabel(new Date(e.at))}</span>{(Object.keys(MARK_LABEL) as (keyof typeof MARK_LABEL)[]).filter(k => e.marks[k]).map(k => <span key={k} className="mpill">{MARK_LABEL[k]}</span>)}</div></div>)}</section> : null;
+    <div className="ent-meta"><span>{timeLabelIn(e.at, e.tz)}</span>{(Object.keys(MARK_LABEL) as (keyof typeof MARK_LABEL)[]).filter(k => e.marks[k]).map(k => <span key={k} className="mpill">{MARK_LABEL[k]}</span>)}</div></div>)}</section> : null;
   const weather = <section className="panel" aria-labelledby="h-weather"><h2 className="lbl" id="h-weather">Inner weather</h2>
     {p.moments.length ? <div className="moms" role="list">{[...p.moments].sort((a, b) => a.at - b.at).map(m => <button key={m.id} type="button" className="mom" onClick={() => p.onOpenFeeling(m.word, { kind: 'moment', id: m.id! })} aria-label={`${timeLabel(new Date(m.at))}, ${m.word}. Open its card`}>
       <Form family={m.family} second={m.second} label={FAMILY_NAME[m.family]} /><b>{timeLabel(new Date(m.at)).replace(/ (am|pm)/, '')}</b><i>{m.word}</i></button>)}</div>
@@ -66,6 +66,7 @@ export function TodayView(p: TodayProps) {
     : <button type="button" className="sofar" aria-expanded="false" onClick={p.onToggleFold}><span className="sf-l">Today so far</span><span className="sf-s">grateful for</span><span className="sf-i"><Icon name="down" /></span></button>;
   return <div className="scr"><div className="content scroll">{header}{p.writer}{kept}{weather}{p.night ? sofar : grateful}</div><Tabs current="today" /></div>;
 }
+const skippedFirstRun = () => { try { return !!localStorage.getItem('logbook-first-run-skipped'); } catch { return false; } };
 export function Today() {
   const now = useNow(), day = dayKey(now), undo = useUndo();
   const [open, setOpen] = useState(false), [card, setCard] = useState<{ word: string; src: FeelingSource } | null>(null), [menu, setMenu] = useState<number | null>(null);
@@ -77,7 +78,7 @@ export function Today() {
     return { entries, moments, tagHistory, row: await db.days.get(day), settings: await getSettings(db), people: await db.people.toArray(), tags: (await db.tags.toArray()).map(t => t.name),
       own: Object.fromEntries((await db.words.toArray()).map(w => [w.word, w.family])) as Record<string, Family> };
   }, [day]);
-  const needsFirstRun = !!data && !data.settings.starterLoaded && !localStorage.getItem('logbook-first-run-skipped');
+  const needsFirstRun = !!data && !data.settings.starterLoaded && !skippedFirstRun();
   useEffect(() => { if (needsFirstRun) go({ name: 'first-run' }); }, [needsFirstRun]);
   if (!data || needsFirstRun) return <div className="scr" />;
   const suggested = suggestedOverall(data.moments);

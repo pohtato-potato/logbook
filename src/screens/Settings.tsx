@@ -11,10 +11,11 @@ import { VOICES } from '../domain/voices';
 import { Tabs } from '../ui/Tabs';
 
 /* Save a file with the system picker where the browser has one, otherwise as a download. */
-export async function saveFile(blob: Blob, name: string) {
+export async function saveFile(blob: Blob, name: string): Promise<boolean> {
   const w = window as unknown as { showSaveFilePicker?: (o: object) => Promise<{ createWritable(): Promise<{ write(b: Blob): Promise<void>; close(): Promise<void> }> }> };
-  if (w.showSaveFilePicker) { try { const h = await w.showSaveFilePicker({ suggestedName: name }); const s = await h.createWritable(); await s.write(blob); await s.close(); return; } catch (e) { if ((e as Error).name === 'AbortError') return; } }
+  if (w.showSaveFilePicker) { try { const h = await w.showSaveFilePicker({ suggestedName: name }); const s = await h.createWritable(); await s.write(blob); await s.close(); return true; } catch (e) { if ((e as Error).name === 'AbortError') return false; } }
   const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+  return true;
 }
 const pick = <T extends string | number,>(label: string, options: [T, string][], cur: T, on: (v: T) => void) =>
   <div className="chips" role="group" aria-label={label}>{options.map(([v, l]) => <button key={String(v)} type="button" className={'chip' + (v === cur ? ' on ink' : '')} aria-pressed={v === cur} onClick={() => on(v)}>{l}</button>)}</div>;
@@ -48,8 +49,8 @@ export function Settings() {
   const act = (fn: () => Promise<unknown>) => async () => { setMessage(''); try { await fn(); } catch (e) { setMessage(e instanceof BackupError || e instanceof StarterError ? e.message : 'That didn’t work. Nothing was changed; try again.'); } };
   return <SettingsView settings={settings} message={message}
     onVoice={voice => void saveSettings(db, { voice })} onDayStyle={dayStyle => void saveSettings(db, { dayStyle })} onTheme={theme => void saveSettings(db, { theme })} onMotion={motion => void saveSettings(db, { motion })}
-    onExport={act(async () => { await saveFile(await makeMarkdownZip(db), `logbook-export-${today}.zip`); await saveSettings(db, { lastExport: Date.now() }); setMessage('Exported. The zip holds one Markdown file per day.'); })}
+    onExport={act(async () => { if (!(await saveFile(await makeMarkdownZip(db), `logbook-export-${today}.zip`))) return; await saveSettings(db, { lastExport: Date.now() }); setMessage('Exported. The zip holds one Markdown file per day.'); })}
     onBackup={act(async () => { await saveFile(new Blob([JSON.stringify(await makeBackup(db))], { type: 'application/json' }), `logbook-backup-${today}.json`); })}
-    onRestore={f => void act(async () => { const data = JSON.parse(await f.text()); if (!confirm('Replace everything in Logbook with this backup?')) return; await restoreBackup(db, data); setMessage('Restored from the backup.'); })()}
+    onRestore={f => void act(async () => { const text = await f.text(); if (!confirm('Replace everything in Logbook with this backup?')) return; await restoreBackup(db, text); setMessage('Restored from the backup.'); })()}
     onStarter={f => void act(async () => { await applyStarter(db, parseStarter(await f.text())); setMessage('Starter file loaded.'); })()} />;
 }

@@ -1,4 +1,4 @@
-import { useState, type CSSProperties } from 'react';
+import { useRef, useState, type CSSProperties } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db/db';
 import { addOwnWord, keepMoment, setOverall } from '../db/actions';
@@ -65,7 +65,8 @@ export function FeelingPicker({ when: startWhen, word: startWord }: { when: When
   const [s, set] = useState<{ when: When; fam: Family; word: string; strength: number; about: string; second?: Family; query: string }>(
     { when: startWhen, fam: first?.family ?? 'wistful', word: first?.w ?? '', strength: 3, about: '', query: '' });
   const patch = (x: Partial<typeof s>) => set(prev => ({ ...prev, ...x }));
-  const keep = (another: boolean) => keepIt(another).catch(undo.fail);
+  const busy = useRef(false); // a second tap while saving does nothing
+  const keep = (another: boolean) => { if (busy.current) return; busy.current = true; keepIt(another).catch(undo.fail).finally(() => { busy.current = false; }); };
   const keepIt = async (another: boolean) => {
     const sel = findWord(s.word, own); if (!sel || s.query.trim()) return;
     if (s.when === 'day') { undo.show(await setOverall(db, dayKey(new Date()), { word: sel.w, family: s.fam, strength: s.strength }), `The day overall is now ${sel.w}.`, { carry: true }); go({ name: 'today' }); return; }

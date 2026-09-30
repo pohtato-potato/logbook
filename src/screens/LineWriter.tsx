@@ -53,14 +53,16 @@ export function LineWriter({ own, people, tags, onOpenFeeling, removerRef }: { o
     setText(next); setSugg(null);
     requestAnimationFrame(() => { const p = at + s.insert.length + 1; el.focus(); el.setSelectionRange(p, p); });
   };
+  const busy = useRef(false); // a second tap while saving does nothing
   const keep = async () => {
-    if (!text.trim()) return; setError('');
+    if (!text.trim() || busy.current) return; setError(''); busy.current = true;
     try {
       const r = await keepLine(db, { text, marks, at: new Date() }, own);
       setText(''); setMarks({}); try { sessionStorage.removeItem('logbook-draft'); } catch { /* ignore */ }
       const added = r.momentId ? ' Your feelings were added to your inner weather.' : '';
       undo.show(r.undo, `Kept.${added}${r.skipped.length ? ` ${r.skipped.join(', ')} was already there from the last hour.` : ''}`);
     } catch (e) { setError(e instanceof StorageFullError ? e.message : 'That didn’t save. Your words are still in the box; try Keep again.'); }
+    finally { busy.current = false; }
   };
   /* A chosen feeling behaves as one piece: tapping it opens its card, and one Backspace removes it. */
   const onClick = () => {

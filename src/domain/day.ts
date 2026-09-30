@@ -28,6 +28,15 @@ export function weekStartOf(day: string): string {
 export function timeZone(): string {
   return Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
 }
+/* The time as it was where the entry was written (its stored time zone). */
+export function timeLabelIn(at: number, tz: string): string {
+  let parts: Intl.DateTimeFormatPart[];
+  try { parts = new Intl.DateTimeFormat('en-GB', { hour: 'numeric', minute: '2-digit', hourCycle: 'h12', timeZone: tz }).formatToParts(new Date(at)); }
+  catch { return timeLabel(new Date(at)); }
+  const get = (t: string) => parts.find(x => x.type === t)?.value ?? '';
+  const h = Number(get('hour')) % 12 || 12, ap = get('dayPeriod').toLowerCase().replace(/\./g, '');
+  return `${h}:${get('minute')} ${ap}`;
+}
 export function timeLabel(at: Date): string {
   const h = at.getHours(), m = at.getMinutes();
   return `${h % 12 === 0 ? 12 : h % 12}:${pad(m)} ${h < 12 ? 'am' : 'pm'}`;

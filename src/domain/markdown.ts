@@ -1,8 +1,10 @@
 import type { DayRow, Entry, Moment } from '../db/types';
-import { FAMILY_NAME, ladderName } from '../vocab/vocab';
-import { timeLabel } from './day';
+import { FAMILY_NAME, feelingOf, ladderName } from '../vocab/vocab';
+import { timeLabel, timeLabelIn } from './day';
 
 const MARK_WORD = { first: 'first', gift: 'gift', priv: 'private', quiet: 'don’t bring back' } as const;
+/* :word codes become plain words, so the file reads naturally without the app. */
+export const plainWords = (t: string) => t.replace(/(^|\s):([\p{L}][\p{L}'-]*)/gu, (m, s: string, w: string) => (feelingOf(w, {}) ? s + w.replace(/-/g, ' ') : m));
 const q = (s: string) => '"' + s.replace(/\\/g, '\\\\').replace(/"/g, '\\"') + '"';
 /* One day as a plain Markdown file anyone can read in ten years: front matter, then entries and feelings in time order. */
 export function dayToMarkdown(day: string, row: DayRow | undefined, entries: Entry[], moments: Moment[]): string {
@@ -11,10 +13,12 @@ export function dayToMarkdown(day: string, row: DayRow | undefined, entries: Ent
   const tags = [...new Set(entries.flatMap(e => e.tags))], people = [...new Set(entries.flatMap(e => e.people))];
   if (tags.length) fm.push(`tags: [${tags.map(q).join(', ')}]`);
   if (people.length) fm.push(`people: [${people.map(q).join(', ')}]`);
+  const marked = (Object.keys(MARK_WORD) as (keyof typeof MARK_WORD)[]).filter(k => entries.some(e => e.marks[k]));
+  if (marked.length) fm.push(`marks: [${marked.map(k => q(MARK_WORD[k])).join(', ')}]`);
   fm.push('---', '');
   const body: string[] = [];
   [...entries].sort((a, b) => a.at - b.at).forEach(e => {
-    body.push(`## ${timeLabel(new Date(e.at))}`, '', e.text, '');
+    body.push(`## ${timeLabelIn(e.at, e.tz)}`, '', plainWords(e.text), '');
     const marks = (Object.keys(MARK_WORD) as (keyof typeof MARK_WORD)[]).filter(k => e.marks[k]).map(k => MARK_WORD[k]);
     if (marks.length) body.push(`Marks: ${marks.join(', ')}`, '');
   });

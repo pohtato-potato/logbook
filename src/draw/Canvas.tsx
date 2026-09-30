@@ -11,6 +11,8 @@ function tick(now: number) {
   if (live.size && motion.speed > 0 && !reduced && !document.hidden) requestAnimationFrame(tick); else { running = false; last = 0; }
 }
 export function startMotion() { if (!running && live.size && motion.speed > 0 && !reduced) { running = true; requestAnimationFrame(tick); } }
+// The loop stops while the app is hidden; start it again when it comes back.
+if (typeof document !== 'undefined') document.addEventListener('visibilitychange', () => { if (!document.hidden) startMotion(); });
 /* One canvas, sized to its CSS box; animated scenes share one loop, and Still or reduced motion draws a single frame. */
 export function Scene({ draw, animate = false, label, className }: { draw: Draw; animate?: boolean; label: string; className?: string }) {
   const ref = useRef<HTMLCanvasElement>(null), drawRef = useRef(draw);

@@ -1,3 +1,32 @@
-{ "format": "logbook-starter", "version": 1,
-  "people": [{ "id": "a", "initial": "A", "name": "Friend A", "birthday": "10-11" }, { "id": "r", "initial": "R", "name": "Friend R" }],
-  "homes": [{ "name": "Home 1", "lat": 28.6, "lon": 77.2, "from": "2019-01-01", "to": "2025-01-01" }, { "name": "Home 2", "lat": 28.7, "lon": 77.1, "from": "2025-01-01" }] }
+{
+  "format": "logbook-starter",
+  "version": 1,
+  "people": [
+    {
+      "id": "a",
+      "initial": "A",
+      "name": "Friend A",
+      "birthday": "10-11"
+    },
+    {
+      "id": "r",
+      "initial": "R",
+      "name": "Friend R"
+    }
+  ],
+  "homes": [
+    {
+      "name": "Home 1",
+      "lat": 10.001,
+      "lon": 20.001,
+      "from": "2019-01-01",
+      "to": "2025-01-01"
+    },
+    {
+      "name": "Home 2",
+      "lat": 10.002,
+      "lon": 20.002,
+      "from": "2025-01-01"
+    }
+  ]
+}

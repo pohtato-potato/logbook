@@ -1,4 +1,4 @@
-import type { Family } from '../vocab/vocab';
+import { feelingOf, type Family } from '../vocab/vocab';
 import { dayKey, timeZone } from '../domain/day';
 import { feelingsOf, momentFromLine, peopleOf, removeFeelingToken, tagsOf, type MomentDraft } from '../domain/line';
 import type { LogbookDb } from './db';
@@ -27,9 +27,13 @@ export async function keepLine(db: LogbookDb, { text, marks, at }: { text: strin
   return guard(() => db.transaction('rw', db.entries, db.moments, db.tags, async () => {
     const entry: Entry = { day, at: t, tz: timeZone(), kind: 'line', text: clean, marks: { ...marks }, tags: tagsOf(clean), people: peopleOf(clean), writtenAt: Date.now() };
     const entryId = await db.entries.add(entry);
-    for (const name of entry.tags) if (!(await db.tags.get(name))) await db.tags.add({ name, created: t });
+    const made: string[] = [];
+    for (const name of entry.tags) if (!(await db.tags.get(name))) { await db.tags.add({ name, created: t }); made.push(name); }
     const momentId = moment ? await db.moments.add({ ...moment, day, at: t, entryId }) : null;
-    return { entryId, momentId, skipped, undo: once('Kept', () => db.transaction('rw', db.entries, db.moments, async () => { await db.entries.delete(entryId); await db.moments.where('entryId').equals(entryId).delete(); })) };
+    return { entryId, momentId, skipped, undo: once('Kept', () => db.transaction('rw', db.entries, db.moments, db.tags, async () => {
+      await db.entries.delete(entryId); await db.moments.where('entryId').equals(entryId).delete();
+      for (const name of made) if (!(await db.entries.where('tags').equals(name).count())) await db.tags.delete(name);
+    })) };
   }));
 }
 export async function keepMoment(db: LogbookDb, d: MomentDraft & { at: Date }) {
@@ -46,7 +50,7 @@ async function writeOverall(db: LogbookDb, day: string, overall: { word: string;
 }
 export const setOverall = writeOverall;
 export const confirmOverall = writeOverall;
-export async function removeFeelingFromEntry(db: LogbookDb, entryId: number, word: string): Promise<Undo> {
+export async function removeFeelingFromEntry(db: LogbookDb, entryId: number, word: string, own: Record<string, Family> = {}): Promise<Undo> {
   const e = await db.entries.get(entryId); if (!e) return once('Nothing', async () => {});
   const moments = await db.moments.where('entryId').equals(entryId).toArray();
   await guard(() => db.transaction('rw', db.entries, db.moments, async () => {
@@ -54,7 +58,7 @@ export async function removeFeelingFromEntry(db: LogbookDb, entryId: number, wor
     for (const m of moments) {
       const words = [m.word, ...(m.about ? m.about.replace(/^then /, '').split(', ') : [])].filter(w => w !== word);
       if (!words.length) { await db.moments.delete(m.id!); continue; }
-      const { moment } = momentFromLine(words.map(w => ({ w, family: w === m.word ? m.family : (m.second ?? m.family) })), new Set());
+      const { moment } = momentFromLine(words.map(w => ({ w, family: w === m.word ? m.family : (feelingOf(w, own)?.family ?? m.second ?? m.family) })), new Set());
       const next: Moment = { ...m, word: moment!.word, family: moment!.family };
       delete next.second; delete next.about;
       if (moment!.second) next.second = moment!.second;

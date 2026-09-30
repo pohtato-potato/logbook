@@ -17,7 +17,7 @@ describe('Markdown', () => {
     expect(md).toContain('---\ndate: 2026-09-29\n');
     expect(md).toContain('overall: "close (Warm, Sunset glow)"');
     expect(md).toContain('## 11:24 pm');
-    expect(md).toContain('A "quoted" line: with --- dashes #walk :calm');
+    expect(md).toContain('A "quoted" line: with --- dashes #walk calm');
     expect(md).toContain('Marks: first, private');
     expect(md).toContain('- 11:24 pm, calm (Calm, Clear morning)');
   });

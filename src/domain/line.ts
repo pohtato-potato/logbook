@@ -2,15 +2,15 @@ import { feelingOf, type Family } from '../vocab/vocab';
 
 export interface Token { kind: 'tag' | 'person' | 'feeling'; raw: string; value: string; start: number; end: number }
 export interface MomentDraft { word: string; family: Family; second?: Family; about?: string; strength: number }
-/* # tags, @ people, and : feelings (a colon only at the start of a word, so times like 5:30 don't count) */
-const TOKEN_RE = /(#[\p{L}\p{N}_-]+)|(@[A-Za-z]+)|((?<=^|\s):[\p{L}][\p{L}'-]*)/gu;
+/* # tags, @ people, and : feelings, each only at the start of a word (so emails, C#, issue#12 and 5:30 don't count). A person is kept by initial. */
+const TOKEN_RE = /((?<=^|\s)#[\p{L}\p{N}_-]+)|((?<=^|\s)@[A-Za-z]+)|((?<=^|\s):[\p{L}][\p{L}'-]*)/gu;
 
 export function tokenize(text: string): Token[] {
   const out: Token[] = [];
   for (const m of text.matchAll(TOKEN_RE)) {
     const raw = m[0], start = m.index ?? 0, end = start + raw.length;
     if (m[1]) out.push({ kind: 'tag', raw, value: raw.slice(1).toLowerCase(), start, end });
-    else if (m[2]) out.push({ kind: 'person', raw, value: raw.slice(1).toUpperCase(), start, end });
+    else if (m[2]) out.push({ kind: 'person', raw, value: raw.slice(1, 2).toUpperCase(), start, end });
     else out.push({ kind: 'feeling', raw, value: raw.slice(1).toLowerCase().replace(/-/g, ' '), start, end });
   }
   return out;

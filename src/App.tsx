@@ -24,8 +24,10 @@ export function App() {
     const root = document.documentElement;
     root.dataset.theme = settings.theme;
     // Very large phone text: the tab bar keeps only its icons, drawn bigger, so labels never collide.
-    root.toggleAttribute('data-big-text', parseFloat(getComputedStyle(root).fontSize) > 18);
+    const big = () => root.toggleAttribute('data-big-text', parseFloat(getComputedStyle(root).fontSize) > 18);
+    big(); addEventListener('resize', big);
     motion.speed = settings.motion === 'still' ? 0 : settings.motion === 'lively' ? 2.2 : 1; startMotion();
+    return () => removeEventListener('resize', big);
   }, [settings.theme, settings.motion]);
   return <div id="app-root"><LookProvider value={lookOf(settings.theme)}><UndoProvider>
     <ClearUndoOnMove at={JSON.stringify(r)} />
