@@ -39,4 +39,13 @@ describe('forms', () => {
     expect(html).toContain('written later'); expect(html).toContain('max="2026-09-29"');
     expect(renderToStaticMarkup(<PastFormView date="2027-06-14" text="x" today="2026-09-29" onChange={noop} onKeep={noop} />)).toMatch(/disabled=""[^>]*>[^]*Keep this moment/);
   });
+  it('place: suggestions only after a position, as chips with distance', () => {
+    const base = { name: '', first: false, canLocate: true, error: '', places: [], homes: [], onChange: noop, onLocate: noop, onKeep: noop, onSuggest: noop };
+    expect(renderToStaticMarkup(<PlaceFormView {...base} pos={null} suggestions={[]} suggestState="idle" />)).not.toContain('Suggest names nearby');
+    const html = renderToStaticMarkup(<PlaceFormView {...base} pos={{ lat: 10, lon: 20 }} suggestions={[{ name: 'Chai Point', km: 0.2 }]} suggestState="idle" />);
+    expect(html).toContain('Suggest names nearby'); expect(html).toContain('Chai Point, 0.2 km'); expect(html).toContain('Names from OpenStreetMap');
+    expect(renderToStaticMarkup(<PlaceFormView {...base} pos={{ lat: 10, lon: 20 }} suggestions={[]} suggestState="offline" />)).toContain('Couldn’t reach OpenStreetMap');
+    expect(renderToStaticMarkup(<PlaceFormView {...base} pos={{ lat: 10, lon: 20 }} suggestions={[]} suggestState="none" />)).toContain('No named places close by');
+    expect(renderToStaticMarkup(<PlaceFormView {...base} pos={{ lat: 10, lon: 20 }} suggestions={[]} suggestState="off" />)).toContain('Place names are switched off in Settings');
+  });
 });

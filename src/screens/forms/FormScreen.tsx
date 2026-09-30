@@ -7,6 +7,10 @@ import { dayKey, parseDay, timeLabel } from '../../domain/day';
 import { roundCoord } from '../../domain/geo';
 import { go, type FormKind } from '../../router';
 import { useUndo } from '../../ui/Undo';
+import { sourcesOf } from '../../db/stamps';
+import { fetchJson } from '../../sources/http';
+import { overpassQuery, parsePlaces } from '../../sources/overpass';
+import type { SuggestState } from './index';
 import { useNow } from '../../ui/useNow';
 import { KeepFormView, MediaFormView, PastFormView, PersonFormView, PhotoFormView, PlaceFormView, QuoteFormView, SpanFormView,
   type KeepState, type MediaState, type PastState, type PersonState, type PlaceState, type QuoteState, type SpanState } from './index';
@@ -30,6 +34,12 @@ export function FormScreen({ kind }: { kind: FormKind }) {
   const [quote, setQuote] = useForm<QuoteState>({ text: '', who: 'Overheard', where: '' });
   const [place, setPlace] = useForm<PlaceState>({ name: '', first: false });
   const [pos, setPos] = useState<{ lat: number; lon: number } | null>(null), [locating, setLocating] = useState(false), [placeErr, setPlaceErr] = useState('');
+  const [sugg, setSugg] = useState<{ name: string; km: number }[]>([]), [sState, setSState] = useState<SuggestState>('idle');
+  const onSuggest = async () => {
+    if (!pos) return; if (!sourcesOf(await getSettings(db)).places) { setSState('off'); return; }
+    setSState('loading'); const q = overpassQuery(pos.lat, pos.lon);
+    try { const list = parsePlaces(await fetchJson(q.url, q.init), pos.lat, pos.lon); setSugg(list); setSState(list.length ? 'idle' : 'none'); } catch { setSState('offline'); }
+  };
   const [person, setPerson] = useForm<PersonState>({ who: [], how: 'In person' });
   const [keepsake, setKeepsake] = useForm<KeepState & { file?: File }>({ name: '' });
   const [span, setSpan] = useForm<SpanState>({ name: '', from: dayKey(now), to: dayKey(now), family: 'warm' });
@@ -41,7 +51,7 @@ export function FormScreen({ kind }: { kind: FormKind }) {
     case 'media': return <MediaFormView {...media} keepSub={sub} onChange={setMedia} onKeep={() => keep(entry({ kind: 'media', text: media.note, data: { kind: 'media', media: media.media, title: media.title.trim(), rating: media.rating, current: media.current } }))} />;
     case 'quote': return <QuoteFormView {...quote} people={people} keepSub={sub} onChange={setQuote}
       onKeep={() => keep(entry({ kind: 'quote', text: quote.text, people: quote.who.length === 1 ? [quote.who] : [], data: { kind: 'quote', who: quote.who, ...(quote.where.trim() ? { where: quote.where.trim() } : {}) } }))} />;
-    case 'place': return <PlaceFormView {...place} pos={pos} canLocate={typeof navigator !== 'undefined' && 'geolocation' in navigator} locating={locating} error={placeErr} places={data?.places ?? []} homes={data?.homes ?? []} keepSub={sub} onChange={setPlace}
+    case 'place': return <PlaceFormView {...place} pos={pos} canLocate={typeof navigator !== 'undefined' && 'geolocation' in navigator} locating={locating} error={placeErr} suggestions={sugg} suggestState={sState} onSuggest={onSuggest} places={data?.places ?? []} homes={data?.homes ?? []} keepSub={sub} onChange={setPlace}
       onLocate={() => { setLocating(true); setPlaceErr('');
         navigator.geolocation.getCurrentPosition(p => { setPos({ lat: roundCoord(p.coords.latitude), lon: roundCoord(p.coords.longitude) }); setLocating(false); },
           () => { setPlaceErr('Logbook couldn’t get your position. You can still keep the place.'); setLocating(false); }, { maximumAge: 60_000, timeout: 15_000 }); }}

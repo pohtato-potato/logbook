@@ -49,7 +49,9 @@ export function QuoteFormView(p: QuoteState & Change<QuoteState> & { people: Per
 }
 export type PlaceState = { name: string; first: boolean };
 /* A place: its name is typed (suggestions from OpenStreetMap come later, and only when asked). Its position is read once, only on "Use where I am". */
-export function PlaceFormView(p: PlaceState & Change<PlaceState> & { pos: { lat: number; lon: number } | null; canLocate: boolean; locating?: boolean; error: string; places: Place[]; homes: { lat: number; lon: number }[]; onLocate(): void; keepSub?: string }) {
+export type SuggestState = 'idle' | 'loading' | 'none' | 'offline' | 'off';
+const SUGGEST_SAYS: Partial<Record<SuggestState, string>> = { none: 'No named places close by. Type any name you like.', offline: 'Couldn’t reach OpenStreetMap. Type any name you like.', off: 'Place names are switched off in Settings.' };
+export function PlaceFormView(p: PlaceState & Change<PlaceState> & { suggestions?: { name: string; km: number }[]; suggestState?: SuggestState; onSuggest?(): void; pos: { lat: number; lon: number } | null; canLocate: boolean; locating?: boolean; error: string; places: Place[]; homes: { lat: number; lon: number }[]; onLocate(): void; keepSub?: string }) {
   const look = useLook(), preview: Place[] = [...p.places, ...(p.pos ? [{ name: p.name, first: p.first, visits: 1, ...p.pos }] : [])];
   return <FormFrame title="Place" keepLabel="Keep this place" keepSub={p.keepSub} disabled={!p.name.trim()} onKeep={p.onKeep}>
     <Field label="Place name"><input className="sinput" value={p.name} onChange={e => p.onChange({ name: e.target.value })} /></Field>
@@ -57,6 +59,11 @@ export function PlaceFormView(p: PlaceState & Change<PlaceState> & { pos: { lat:
     {p.canLocate && <button type="button" className="btn wide" disabled={p.locating} onClick={p.onLocate}><Icon name="k-place" />{p.pos ? 'Position added. Use where I am again' : p.locating ? 'Finding where you are…' : 'Use where I am'}</button>}
     {p.error && <p className="hint" role="alert">{p.error}</p>}
     <p className="hint">{p.pos ? 'Kept to about 100 metres. Logbook reads your position only when you tap the button.' : 'It shows on your map once it has a position. Without one, it is still kept in your places.'}</p>
+    {p.pos && p.onSuggest && <>
+      {p.suggestState !== 'off' && <button type="button" className="btn wide" disabled={p.suggestState === 'loading'} onClick={p.onSuggest}>{p.suggestState === 'loading' ? 'Asking OpenStreetMap…' : 'Suggest names nearby'}</button>}
+      {!!p.suggestions?.length && <><Chips label="Names nearby" options={p.suggestions.map(x => x.name)} value={p.name.trim()} on={name => p.onChange({ name })} names={n => `${n}, ${p.suggestions!.find(x => x.name === n)!.km} km`} />
+        <p className="hint">Names from OpenStreetMap. You can change any of them.</p></>}
+      {p.suggestState && SUGGEST_SAYS[p.suggestState] && <p className="hint" role="status">{SUGGEST_SAYS[p.suggestState]}</p>}</>}
     <Scene className="mapmini" label={p.pos ? 'A small drawn map with this place among your others' : 'A small drawn map of your places'} animate draw={(ctx, w, h, t) => drawPlaceMap(ctx, look, w, h, t, preview, p.homes)} />
   </FormFrame>;
 }
