@@ -7,28 +7,18 @@ import { dayKey, isNight, timeLabel } from '../domain/day';
 import { tokenize } from '../domain/line';
 import { tagFamily } from '../domain/colour';
 import { FAMILY_NAME, feelingOf, ladderName, type Family } from '../vocab/vocab';
-import { drawForm } from '../draw/forms';
-import { Scene } from '../draw/Canvas';
+import { Form } from '../ui/Form';
 import { FeelingChip, TagChip } from '../ui/Chips';
 import { Icon } from '../ui/Icons';
 import { Tabs } from '../ui/Tabs';
 import { Sheet } from '../ui/Sheet';
 import { useUndo } from '../ui/Undo';
-import { useLook } from '../ui/Look';
 import { go } from '../router';
 import { VOICES } from '../domain/voices';
 import { LineWriter } from './LineWriter';
 import { FeelingCard, type FeelingSource } from './FeelingCard';
 
-/* A feeling's form, drawn live. */
-export function Form({ family, second, label, bloom }: { family: Family; second?: Family; label: string; bloom?: boolean }) {
-  const look = useLook(), born = useRef<number | null>(null);
-  return <Scene animate label={label} draw={(ctx, w, h, t) => {
-    let k = 1;
-    if (bloom) { if (born.current === null) born.current = t; const u = Math.min(1, (t - born.current) / 2.4 + (t === 0 ? 1 : 0)); k = 0.25 + 0.75 * (1 - Math.pow(1 - u, 3)); }
-    drawForm(ctx, look, family, w / 2, h / 2, Math.min(w, h) * 0.31 * k, t, second);
-  }} />;
-}
+export { Form } from '../ui/Form';
 /* The day overall, suggested from the most-felt family and its latest word, until it's set. */
 export function suggestedOverall(moments: Moment[]) {
   if (!moments.length) return undefined;
