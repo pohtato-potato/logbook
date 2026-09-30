@@ -10,6 +10,8 @@ import { SearchView } from '../src/screens/Search';
 import { searchAll } from '../src/domain/search';
 import { DayPageView } from '../src/screens/DayPage';
 import { SHELF_IDS } from '../src/router';
+import { OutsideLine, StampsPanelView } from '../src/screens/Stamps';
+import { stampList } from '../src/domain/stamps';
 import type { Entry, Person, Place, Span } from '../src/db/types';
 
 const noop = () => {};
@@ -48,4 +50,13 @@ describe('every Stage 2a screen renders cleanly, empty and full', () => {
       renderToStaticMarkup(<DayPageView day="2026-09-20" style="bloom" entries={entries} moments={[]} own={{}} lookup={lookup} />)];
     html.forEach(h => expect(h).not.toMatch(bad));
   });
+  it('stamps in every state, with and without data, including polar days', () => {
+    const lists = [stampList({ day: '2026-06-21', today: '2026-06-21', pos: { lat: 78.22, lon: 15.65, source: 'here' }, homes: [], people: [A], spans }), stampList({ day: '2026-09-29', today: '2026-09-29', pos: null, homes: [], people: [], spans: [] })];
+    for (const list of lists) for (const status of ['ok', 'off', 'no-place', 'offline', 'loading'] as const) for (const open of [true, false]) {
+      expect(renderToStaticMarkup(<StampsPanelView list={list} status={status} open={open} onToggle={noop} onWhere={noop} canLocate placeSource="home" />)).not.toMatch(bad);
+      expect(renderToStaticMarkup(<OutsideLine list={list} />)).not.toMatch(bad);
+    }
+    expect(Object.fromEntries(lists[0])['Sun']).toBe('The sun doesn’t set today');
+  });
 });
+

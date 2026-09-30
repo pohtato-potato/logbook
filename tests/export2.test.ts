@@ -41,4 +41,10 @@ describe('backup with files', () => {
     const b = await makeBackup(db); delete (b.tables as Record<string, unknown>).photos;
     await expect(restoreBackup(db, JSON.parse(JSON.stringify(b)))).resolves.toBeUndefined();
   });
+  it('stamps travel into the front matter in words', async () => {
+    await db.days.put({ day: '2026-09-29', stamps: { weather: { code: 2, max: 31.4, min: 24.1, rain: 1.8, final: true, at: 0 }, air: { aqi: 212, category: 'Poor', lead: 'PM2.5', final: true, at: 0 } } });
+    const text = new TextDecoder().decode(new Uint8Array(await (await makeMarkdownZip(db)).arrayBuffer()));
+    expect(text).toContain('weather: "Partly cloudy, 31° by day, 24° at night, 2 mm rain"'); expect(text).toContain('air: "212, poor (India scale)"');
+  });
 });
+

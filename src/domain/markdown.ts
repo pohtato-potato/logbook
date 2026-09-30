@@ -1,5 +1,7 @@
 import type { DayRow, Entry, Moment } from '../db/types';
 import { FAMILY_NAME, ladderName } from '../vocab/vocab';
+import { weatherLine } from './stamps';
+import { airWords } from './aqi';
 import { EMPTY_LOOKUP, entryLine, plainWords, type Lookup } from './entryText';
 import { localDate, parseDay, timeLabel, timeLabelIn } from './day';
 
@@ -15,6 +17,8 @@ const q = (s: string) => '"' + s.replace(/\\/g, '\\\\').replace(/"/g, '\\"') + '
 export function dayToMarkdown(day: string, row: DayRow | undefined, entries: Entry[], moments: Moment[], lk: Lookup = EMPTY_LOOKUP, files: DayFiles = { photos: [], audio: new Map() }): string {
   const fm = ['---', `date: ${day}`];
   if (row?.overall) fm.push(`overall: ${q(`${row.overall.word} (${FAMILY_NAME[row.overall.family]}, ${ladderName(row.overall.family, row.overall.strength)})`)}`);
+  if (row?.stamps?.weather) fm.push(`weather: ${q(weatherLine(row.stamps.weather))}`);
+  if (row?.stamps?.air) fm.push(`air: ${q(airWords(row.stamps.air))}`);
   const tags = [...new Set(entries.flatMap(e => e.tags))], people = [...new Set(entries.flatMap(e => e.people))];
   if (tags.length) fm.push(`tags: [${tags.map(q).join(', ')}]`);
   if (people.length) fm.push(`people: [${people.map(q).join(', ')}]`);
