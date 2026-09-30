@@ -11,6 +11,8 @@ import { Sheet } from '../ui/Sheet';
 import { useLook } from '../ui/Look';
 import { CAL_TABS, go, type CalTab } from '../router';
 import { Year } from './calendar/Year';
+import { Gallery } from './calendar/Gallery';
+import { Life } from './calendar/Life';
 import { suggestedOverall } from './Today';
 import { useNow } from '../ui/useNow';
 import type { Span } from '../db/types';
@@ -80,7 +82,7 @@ export function Calendar({ month, tab = 'days' }: { month?: string; tab?: CalTab
     return { days: buildMonthDays(moments, entries, rows), spans: (await db.spans.toArray()).filter(sp => sp.from <= last && sp.to >= first).sort((a, b) => a.from.localeCompare(b.from)) };
   }, [m]) ?? { days: {}, spans: [] };
   return <CalendarView month={m} today={today} days={days} spans={spans} open={open} onOpen={setOpen} onMonth={mm => go({ name: 'cal', month: mm, tab })} tab={tab}>
-    {tab === 'year' ? <Year year={Number(m.slice(0, 4))} today={today} /> : <p className="entry">Coming in this stage.</p>}</CalendarView>;
+    {tab === 'year' ? <Year year={Number(m.slice(0, 4))} today={today} /> : tab === 'gallery' ? <Gallery month={m} today={today} /> : tab === 'life' ? <Life /> : <p className="entry">Coming in this stage.</p>}</CalendarView>;
 }
 
 /* Every day with anything kept: moments, a set day overall, or just lines. */

@@ -3,6 +3,8 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { parseRoute, routeHash } from '../src/router';
 import { CalendarView } from '../src/screens/Calendar';
 import { YearView } from '../src/screens/calendar/Year';
+import { GalleryView } from '../src/screens/calendar/Gallery';
+import { LifeView } from '../src/screens/calendar/Life';
 import { yearDays } from '../src/domain/looking';
 
 describe('calendar tabs', () => {
@@ -36,5 +38,16 @@ describe('year tab', () => {
     const first = renderToStaticMarkup(<YearView {...base} days={ds} pick={0} />); expect(first).toContain('Nothing kept on this day.'); expect(first).not.toContain('Day before');
   });
   it('no next year past the current one', () => expect(renderToStaticMarkup(<YearView {...base} days={yearDays(2026, new Map())} pick={null} />)).not.toContain('aria-label="Next year"'));
+});
+describe('gallery and life', () => {
+  it('gallery: a bloom per kept day, named in words; other days dimmed', () => {
+    const html = renderToStaticMarkup(<GalleryView month="2026-09" today="2026-09-29" cells={{ '2026-09-12': { overall: 'calm', moments: [{ h: 9, family: 'calm', strength: 3 }] } }} onOpen={() => {}} />);
+    expect(html).toContain('aria-label="12 September: mostly calm, 1 moment"'); expect(html).toContain('class="gc2 future"'); expect(html).not.toMatch(/undefined|NaN/);
+    expect(renderToStaticMarkup(<GalleryView month="2026-09" today="2026-09-29" cells={{}} onOpen={() => {}} />)).toContain('Nothing kept this month yet.');
+  });
+  it('life: year, text, written later, and a way to add more; a kind empty state', () => {
+    expect(renderToStaticMarkup(<LifeView items={[{ year: 2019, day: '2019-06-14', text: 'Graduation', later: true }]} onAdd={() => {}} />)).toMatch(/2019[^]*Graduation[^]*Written later[^]*Add something from before/);
+    expect(renderToStaticMarkup(<LifeView items={[]} onAdd={() => {}} />)).toContain('Your life’s big days gather here');
+  });
 });
 

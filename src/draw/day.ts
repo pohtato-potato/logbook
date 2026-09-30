@@ -33,19 +33,20 @@ function bloomWash(look: Look, moments: DayMoment[], overall: Family, g: Ctx, w:
   g.globalCompositeOperation = 'source-over';
 }
 /* Bloom with an outline: one continuous line runs round the bloom, swelling towards each moment's hour; its colour follows the day. */
-export function drawBloomLine(ctx: Ctx, look: Look, w: number, h: number, t: number, moments: DayMoment[], overall: Family) {
+/* opts.small: a calendar-cell bloom (no blur layer, a lighter line, no inner echo), for the Gallery. */
+export function drawBloomLine(ctx: Ctx, look: Look, w: number, h: number, t: number, moments: DayMoment[], overall: Family, opts: { small?: boolean } = {}) {
   const dark = look.theme === 'dark'; ctx.clearRect(0, 0, w, h);
   const cx = w / 2, cy = h / 2 + 4, R = Math.min(w, h) * 0.36;
-  const layer = bloomLayer(w, h, g => bloomWash(look, moments, overall, g, w, h, cx, cy, R * 0.92, t));
+  const layer = opts.small ? null : bloomLayer(w, h, g => bloomWash(look, moments, overall, g, w, h, cx, cy, R * 0.92, t));
   if (layer) { ctx.save(); ctx.globalAlpha = 0.7; ctx.filter = `blur(${Math.round(R * 0.12)}px)`; ctx.drawImage(layer, 0, 0, w, h); ctx.filter = 'none'; ctx.restore(); }
   else { ctx.save(); ctx.globalAlpha = 0.7; bloomWash(look, moments, overall, ctx, w, h, cx, cy, R * 0.92, t); ctx.restore(); }
   const reach = (a: number) => { let v = 0.62; moments.forEach(m => { let d = Math.abs(a - ang(m.h)) % (Math.PI * 2); d = Math.min(d, Math.PI * 2 - d); v += 0.42 * Math.exp(-(d * d) / (2 * 0.32 * 0.32)) * (0.7 + 0.1 * (m.strength || 3)); }); return Math.min(1.1, v); };
   const N = 180, pts: [number, number, number][] = [];
   for (let i = 0; i < N; i++) { const a = -Math.PI / 2 + i / N * Math.PI * 2, rr = R * reach(a) * (1 + 0.012 * Math.sin(t * 0.8 + i * 0.21)); pts.push([cx + Math.cos(a) * rr, cy + Math.sin(a) * rr, a]); }
-  ctx.lineCap = 'round'; ctx.lineWidth = 3;
+  ctx.lineCap = 'round'; ctx.lineWidth = opts.small ? 1.8 : 3;
   for (let i = 0; i < N; i++) { const p = pts[i], q = pts[(i + 1) % N], hh = ((p[2] + Math.PI / 2) / (Math.PI * 2) * 24 + 12) % 24, col = dayColorOk(look, moments, hh, overall);
     ctx.strokeStyle = dark ? mix(col, '#FFFFFF', 0.15) : mix(col, '#101820', 0.2); ctx.beginPath(); ctx.moveTo(p[0], p[1]); ctx.lineTo(q[0], q[1]); ctx.stroke(); }
-  ctx.lineWidth = 1.2; ctx.globalAlpha = 0.45; ctx.beginPath(); pts.forEach((p, i) => { const x = cx + (p[0] - cx) * 0.8, y = cy + (p[1] - cy) * 0.8; if (i) ctx.lineTo(x, y); else ctx.moveTo(x, y); }); ctx.closePath(); ctx.strokeStyle = rgba(look.pal[overall], 1); ctx.stroke(); ctx.globalAlpha = 1;
+  if (!opts.small) { ctx.lineWidth = 1.2; ctx.globalAlpha = 0.45; ctx.beginPath(); pts.forEach((p, i) => { const x = cx + (p[0] - cx) * 0.8, y = cy + (p[1] - cy) * 0.8; if (i) ctx.lineTo(x, y); else ctx.moveTo(x, y); }); ctx.closePath(); ctx.strokeStyle = rgba(look.pal[overall], 1); ctx.stroke(); ctx.globalAlpha = 1; }
   drawForm(ctx, look, overall, cx, cy - 8, R * 0.24, t);
 }
 
