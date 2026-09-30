@@ -19,3 +19,6 @@ body:has(.pinbar) .toast{bottom:calc(1rem * 9)}
 .sr-only{position:absolute; width:1px; height:1px; margin:-1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap}
 .ph .phimg{position:absolute; inset:0; width:100%; height:100%; object-fit:cover; border-radius:inherit}
 .ph b{position:relative}
+/* A title inside a list item that opens its day: looks like the title, tappable like a button. */
+.linkish{background:none; border:0; padding:0; color:inherit; font:inherit; text-align:left; cursor:pointer; min-height:var(--tap)}
+.pitem .linkish b{text-decoration:underline; text-decoration-thickness:1px; text-underline-offset:3px}

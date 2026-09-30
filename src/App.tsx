@@ -17,6 +17,7 @@ import { FirstRun } from './screens/FirstRun';
 import { AddSheetView } from './screens/AddSheet';
 import { Later } from './screens/Later';
 import { FormScreen } from './screens/forms/FormScreen';
+import { Shelf, Shelves } from './screens/Shelves';
 
 /* The Undo notice belongs to the screen it was shown on: moving to another screen clears it. */
 function ClearUndoOnMove({ at }: { at: string }) { const { moved } = useUndo(); useEffect(() => { moved(); }, [at, moved]); return null; }
@@ -40,8 +41,8 @@ export function App() {
     {r.name === 'feel' && <FeelingPicker when={r.when} word={r.word} />}
     {r.name === 'add' && <AddSheetView />}
     {r.name === 'form' && <FormScreen key={r.kind} kind={r.kind} />}
-    {r.name === 'shelves' && <Later title="Shelves" tab="shelves" />}
-    {r.name === 'shelf' && <Later title="Shelf" tab="shelves" />}
+    {r.name === 'shelves' && <Shelves />}
+    {r.name === 'shelf' && <Shelf shelf={r.shelf} />}
     {r.name === 'person' && <Later title="Person" tab="shelves" />}
     {r.name === 'tag' && <Later title={'#' + r.tag} tab="shelves" />}
     {r.name === 'search' && <Later title="Search" />}
