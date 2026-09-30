@@ -28,3 +28,7 @@ body:has(.pinbar) .toast{bottom:calc(1rem * 9)}
 .stamp{background:var(--tag); border-radius:12px; padding:8px 10px; font-size:var(--f14); line-height:1.35; margin:0}
 .stamp b{display:block; font-size:var(--f13); color:var(--muted)}
 html[data-big-text] .stamps{grid-template-columns:1fr}
+/* Year tab: the year arrows and style chips on one row; the canvas area takes taps and arrow keys. */
+.yearnav{display:flex; align-items:center; justify-content:space-between; gap:8px}
+.yearpad{border-radius:14px; cursor:pointer}
+.yearpad:focus-visible{outline:3px solid var(--focus); outline-offset:2px}

@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { parseRoute, routeHash } from '../src/router';
 import { CalendarView } from '../src/screens/Calendar';
+import { YearView } from '../src/screens/calendar/Year';
+import { yearDays } from '../src/domain/looking';
 
 describe('calendar tabs', () => {
   it('the tab is part of the route', () => {
@@ -20,3 +22,19 @@ describe('calendar tabs', () => {
     expect(html).toContain('LIFE BODY'); expect(html).toContain('Your life'); expect(html).not.toContain('Previous month');
   });
 });
+describe('year tab', () => {
+  const base = { year: 2026, today: '2026-09-29', style: 'ring' as const, onStyle() {}, onPick() {}, onYear() {}, onOpen() {}, wordsOf: () => ['calm', 'tired'] };
+  it('says what it shows in words, for a sparse and an empty year', () => {
+    const one = renderToStaticMarkup(<YearView {...base} days={yearDays(2026, new Map([['2026-09-12', { family: 'calm', count: 2 }]]))} pick={null} />);
+    expect(one).toContain('1 day kept in 2026, mostly calm.'); expect(one).toMatch(/aria-label="2026 as a ring of days: 1 day kept, mostly calm/);
+    expect(renderToStaticMarkup(<YearView {...base} days={yearDays(2026, new Map())} pick={null} />)).toContain('Nothing kept in 2026 yet.');
+  });
+  it('the pick sheet: a kept day, a future day, the first day of the year', () => {
+    const ds = yearDays(2026, new Map([['2026-09-12', { family: 'calm', count: 2 }]]));
+    expect(renderToStaticMarkup(<YearView {...base} days={ds} pick={254} />)).toMatch(/12 September[^]*Mostly calm: calm, then tired\.[^]*Day before[^]*Open this day[^]*Day after/);
+    expect(renderToStaticMarkup(<YearView {...base} days={ds} pick={300} />)).toContain('Not written yet. This day is still ahead.');
+    const first = renderToStaticMarkup(<YearView {...base} days={ds} pick={0} />); expect(first).toContain('Nothing kept on this day.'); expect(first).not.toContain('Day before');
+  });
+  it('no next year past the current one', () => expect(renderToStaticMarkup(<YearView {...base} days={yearDays(2026, new Map())} pick={null} />)).not.toContain('aria-label="Next year"'));
+});
+
