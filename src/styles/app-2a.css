@@ -1,0 +1,88 @@
+/* Stage 2a styles, ported from the approved phone styles by scripts/port-css-2a.py. */
+.phrow{display:flex; gap:8px; overflow-x:auto; scrollbar-width:none; padding:3px}
+.ph{flex:none; width:calc(1rem * 4.5); height:calc(1rem * 4.5); min-width:var(--tap); min-height:var(--tap); border-radius:14px; border:0; position:relative; cursor:pointer; display:grid; place-items:center; background-color:var(--tag)}
+.ph b{color:#FFFFFF; filter:drop-shadow(0 1px 4px rgba(0,0,0,.6))}
+.ph b svg{width:calc(1rem * 1.4); height:calc(1rem * 1.4); fill:#FFFFFF}
+.ph.phs b svg{fill:none; stroke:#FFFFFF; stroke-width:2.4}
+.ph.potd{box-shadow:0 0 0 3px var(--base), 0 0 0 6px var(--ink)}
+.qcard{margin:0; font-size:var(--f16); line-height:1.45; font-style:italic; padding:2px 0}
+.qcard small{display:block; font-style:normal; font-size:var(--f14); color:var(--muted); margin-top:4px}
+.keeprow{display:grid; grid-template-columns:60px minmax(0, 1fr); gap:10px; align-items:center}
+.keeprow .photo{width:60px; height:46px}
+.wave{display:flex; gap:2px; align-items:center; height:24px}
+.wave i{width:3px; border-radius:2px; background:var(--ink); opacity:.75; display:block}
+.sitem{display:grid; gap:6px; padding:10px; border-radius:14px; background:var(--tag)}
+.spanbar{display:block; width:8px; height:40px; border-radius:4px}
+.spanbar.wide{width:100%; height:6px; margin-top:6px}
+.st-photos{display:flex; gap:6px}
+.st-photos .photo{width:84px; height:62px}
+.addgrid{display:grid; grid-template-columns:1fr 1fr; gap:8px; flex:none}
+.addtile{display:grid; gap:2px; justify-items:start; text-align:left; background:var(--card); border:1.5px solid var(--rule); border-radius:18px; padding:10px 12px; color:var(--ink); cursor:pointer; font:inherit; min-height:var(--tap)}
+.addtile b{font-size:var(--f16); line-height:1.2}
+.addtile span:not(.addico){font-size:var(--f13); color:var(--muted); line-height:1.3}
+.addico svg{width:calc(1rem * 1.5); height:calc(1rem * 1.5)}
+.addtile.feel{grid-template-columns:auto minmax(0, 1fr); grid-template-rows:auto auto; column-gap:12px; align-items:center; background:var(--ink); color:var(--base); border-color:var(--ink); padding:14px 16px; flex:none; position:sticky; bottom:0}
+.addtile.feel .addico{grid-row:1 / 3}
+.addtile.feel b{font-size:var(--f18)}
+.addtile.feel span:not(.addico){color:inherit; opacity:.85}
+.sewrow{display:grid; grid-template-columns:repeat(7, minmax(0, 1fr)); gap:5px}
+.sewbtn{min-height:var(--tap); border-radius:12px; border:1.5px solid var(--line); background:transparent; color:var(--ink); font:inherit; font-size:var(--f16); font-weight:700; cursor:pointer; padding:0}
+.sewbtn.on{background:var(--ink); color:var(--base); border-color:var(--ink)}
+.sewlab{font-size:var(--f16); font-weight:700}
+.keepslot{display:grid; place-items:center; width:100%; height:130px; border-radius:16px; border:2px dashed var(--line); background:transparent; color:var(--ink); cursor:pointer; font:inherit; font-size:var(--f16); font-weight:700; overflow:hidden; padding:0}
+.keepslot span{display:inline-flex; align-items:center; gap:8px}
+.keepslot svg{width:1.3em; height:1.3em}
+.keepslot .photo{width:100%; height:100%; border-radius:0}
+.daterow{display:grid; grid-template-columns:1fr 1fr; gap:8px}
+.swatches{display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:6px}
+.swatch{--fc:var(--line); display:flex; align-items:center; gap:6px; min-height:var(--tap); border-radius:12px; border:2px solid var(--rule); background:transparent; color:var(--ink); font:inherit; font-size:var(--f13); font-weight:700; cursor:pointer; padding:4px 8px}
+.swatch i{width:18px; height:18px; border-radius:50%; background:var(--fc); flex:none}
+.swatch.on{border-color:var(--ink); box-shadow:inset 0 0 0 1px var(--ink)}
+.micbtn{justify-self:center; width:104px; height:104px; border-radius:50%; border:0; background:var(--ink); color:var(--base); display:grid; place-items:center}
+.micbtn svg{width:44px; height:44px}
+canvas.mapmini{width:100%; height:180px; display:block; border-radius:14px}
+canvas.mapbig{width:100%; height:250px; display:block; border-radius:14px}
+.shelftiles{display:grid; grid-template-columns:1fr 1fr; gap:8px; flex:none}
+.shelftile{display:grid; gap:3px; text-align:left; background:var(--card); border:1.5px solid var(--rule); border-radius:18px; padding:12px; color:var(--ink); cursor:pointer; font:inherit; min-height:var(--tap); -webkit-backdrop-filter:blur(16px); backdrop-filter:blur(16px)}
+.shelftile b{font-size:var(--f16); line-height:1.25}
+.shelftile span{font-size:var(--f13); color:var(--muted)}
+.shelfgrid{display:grid; grid-template-columns:repeat(4, minmax(0, 1fr)); gap:8px}
+.shelfp{display:grid; justify-items:center; gap:4px; background:none; border:0; color:var(--ink); cursor:pointer; font:inherit; font-size:var(--f13); font-weight:700; padding:2px}
+.pitem{display:grid; grid-template-columns:auto minmax(0, 1fr) auto; gap:10px; align-items:center; padding:8px 0; border-top:1px solid var(--rule)}
+.pitem:first-child,.subl + .pitem{border-top:0}
+.pitem canvas{width:32px; height:32px}
+.pitem b{font-size:var(--f16); display:block; line-height:1.3}
+.pitem span{font-size:var(--f14); color:var(--muted)}
+.phead{display:grid; grid-template-columns:auto minmax(0, 1fr); gap:14px; align-items:center}
+.pfilter{display:flex; gap:6px; flex:none; flex-wrap:wrap}
+.pgrid{display:grid; grid-template-columns:repeat(4, minmax(0, 1fr)); gap:6px}
+.pgrid .photo{width:auto; height:auto; aspect-ratio:1}
+.tbars{display:flex; justify-content:space-between; align-items:flex-end; gap:3px; height:84px}
+.tbar{flex:1; display:grid; justify-items:center; align-content:end; gap:3px; min-width:0}
+.tbar i{display:block; width:100%; max-width:16px; border-radius:4px 4px 2px 2px; background:var(--ink); opacity:.8}
+.tbar b{font-size:var(--f13); color:var(--muted)}
+.tstrip{display:grid; grid-template-columns:repeat(30, minmax(0, 1fr)); gap:2px}
+.tstrip i{height:22px; border-radius:3px; background:var(--tag); display:block}
+.tstrip i.on{background:var(--fc); box-shadow:inset 0 0 0 1.5px var(--ink)}
+.sres{display:grid; gap:12px}
+.sgroup{display:grid; gap:6px}
+.curcard{display:grid; grid-template-columns:52px minmax(0, 1fr); gap:10px; align-items:center; padding-bottom:10px}
+.curcard b{display:block; font-size:var(--f16)}
+.curcard span{font-size:var(--f14); color:var(--muted)}
+.keepgrid{display:grid; grid-template-columns:1fr 1fr; gap:10px}
+.keeptile{display:grid; gap:3px; font-size:var(--f14)}
+.keeptile .photo{width:100%; height:auto; aspect-ratio:4 / 3}
+.keeptile span{color:var(--muted); font-size:var(--f13)}
+.bday{display:grid; grid-template-columns:auto minmax(0, 1fr); gap:12px; padding:10px 0; border-top:1px solid var(--rule)}
+.bday:first-child{border-top:0}
+.bday b{display:block; font-size:var(--f16)}
+.bday span{font-size:var(--f14); color:var(--muted)}
+.gift{font-size:var(--f14); display:flex; gap:6px; align-items:center; margin-top:3px}
+.gift svg{width:1em; height:1em}
+.addgrid,.shelftiles{grid-template-columns:repeat(auto-fit, minmax(min(100%, 8.5em), 1fr))}
+.sewrow{grid-template-columns:repeat(auto-fit, minmax(44px, 1fr))}
+.swatches{grid-template-columns:repeat(auto-fit, minmax(min(100%, 6.5em), 1fr))}
+.daterow{grid-template-columns:repeat(auto-fit, minmax(min(100%, 8em), 1fr))}
+.keepgrid{grid-template-columns:repeat(auto-fit, minmax(min(100%, 7em), 1fr))}
+.shelfgrid{grid-template-columns:repeat(auto-fit, minmax(min(100%, 4.5em), 1fr))}
+.curcard,.keeprow{grid-template-columns:auto minmax(0, 1fr)}

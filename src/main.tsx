@@ -7,6 +7,7 @@ import '@fontsource-variable/archivo/wdth.css';
 import { App } from './App';
 import './styles/tokens.css';
 import './styles/app.css';
+import './styles/app-2a.css';
 import './styles/app-extra.css';
 
 // Ask the browser not to clear Logbook's storage under pressure. It's fine if it says no.

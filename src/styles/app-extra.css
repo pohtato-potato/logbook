@@ -15,3 +15,5 @@ html[data-big-text] .fgrid{grid-template-columns:repeat(2, minmax(0, 1fr))}
 .lineonly{display:block; width:18px; height:3px; border-radius:2px; background:var(--muted); align-self:center}
 /* the Undo notice sits above the picker's pinned Keep bar instead of on it */
 body:has(.pinbar) .toast{bottom:calc(1rem * 9)}
+/* Words for screen readers only (e.g. a person's name beside their initial). */
+.sr-only{position:absolute; width:1px; height:1px; margin:-1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap}
