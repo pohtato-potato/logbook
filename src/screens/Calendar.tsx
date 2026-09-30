@@ -12,6 +12,8 @@ import { useLook } from '../ui/Look';
 import { go } from '../router';
 import { suggestedOverall } from './Today';
 import { useNow } from '../ui/useNow';
+import type { Span } from '../db/types';
+import { dateRange } from '../domain/entryText';
 
 /* A kept day: its main feeling (absent when only lines were kept), how many moments, and whether anything was marked a first. */
 type DayInfo = { family?: Family; count: number; first: boolean };
@@ -29,14 +31,16 @@ function Glyph({ family, label }: { family: Family; label: string }) {
 }
 const dateWords = (d: string) => parseDay(d).toLocaleDateString('en-GB', { day: 'numeric', month: 'long' });
 /* The month: each kept day shows the form of its main feeling, so it reads without colour. */
-export function CalendarView({ month, today, days, open, onOpen, onMonth }: { month: string; today: string; days: Record<string, DayInfo>; open: string | null; onOpen(d: string | null): void; onMonth(m: string): void }) {
+export function CalendarView({ month, today, days, spans = [], open, onOpen, onMonth }: { month: string; today: string; days: Record<string, DayInfo>; spans?: Span[]; open: string | null; onOpen(d: string | null): void; onMonth(m: string): void }) {
+  const { pal } = useLook(), spanOf = (d: string) => spans.find(s => s.from <= d && d <= s.to), band = (sp?: Span) => (sp ? { ['--sc' as string]: pal[sp.family] } : undefined);
   const grid = monthGrid(month), kept = Object.keys(days).filter(d => d.startsWith(month)).sort(), fams = [...new Set(kept.map(d => days[d].family).filter((f): f is Family => !!f))];
   const cell = (d: string | null, i: number) => {
     if (!d) return <span key={'b' + i} className="mc blank" />;
-    const n = +d.slice(8), info = days[d];
-    if (!info) return <span key={d} className={'mc' + (d > today ? ' future' : '') + (d === today ? ' today' : '')}><span className="dn">{n}</span></span>;
+    const n = +d.slice(8), info = days[d], sp = spanOf(d), inspan = sp ? ' inspan' : '';
+    if (!info) return <span key={d} className={'mc' + inspan + (d > today ? ' future' : '') + (d === today ? ' today' : '')} style={band(sp)}><span className="dn">{n}</span></span>;
     const label = info.family ? `${dateWords(d)}: mostly ${FAMILY_NAME[info.family].toLowerCase()}, ${info.count} moment${info.count === 1 ? '' : 's'}${info.first ? ', a first' : ''}` : `${dateWords(d)}: lines kept, no feelings named${info.first ? ', a first' : ''}`;
-    return <button key={d} type="button" className={'mc' + (d === today ? ' today' : '')} aria-label={label} onClick={() => onOpen(d)}>
+    const said = label + (sp ? `, part of ${sp.name}` : '');
+    return <button key={d} type="button" className={'mc' + inspan + (d === today ? ' today' : '')} style={band(sp)} aria-label={said} onClick={() => onOpen(d)}>
       <span className="dn">{n}</span>{info.family ? <Glyph family={info.family} label="" /> : <span className="lineonly" aria-hidden="true" />}{info.first && <span className="mk"><Icon name="first" /></span>}</button>;
   };
   const i = open ? kept.indexOf(open) : -1, prev = i > 0 ? kept[i - 1] : null, next = i >= 0 && i < kept.length - 1 ? kept[i + 1] : null;
@@ -48,6 +52,7 @@ export function CalendarView({ month, today, days, open, onOpen, onMonth }: { mo
     <p className="hint">Each day shows the form of its main feeling. <Icon name="first" /> marks a first.</p>
     {fams.length > 0 && <div className="formkey">{fams.map(f => <span key={f}><Glyph family={f} label="" />{FAMILY_NAME[f]}</span>)}</div>}
     <div className="cal" role="group" aria-label={monthLabel(month)}>{['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((d, k) => <span key={'h' + k} className="mh" aria-hidden="true">{d}</span>)}{grid.map(cell)}</div>
+    {spans.length > 0 && <section className="panel"><h2 className="lbl">Spans this month</h2>{spans.map(sp => <p key={sp.id} className="entry spanline"><i style={{ background: pal[sp.family] }} aria-hidden="true" />{sp.name}, {dateRange(sp.from, sp.to)}</p>)}<p className="hint">A band along the top of a day means it is part of a span.</p></section>}
     {!kept.length && <p className="entry">Nothing kept this month yet.</p>}
   </div>
   {open && days[open] && <Sheet label={dateWords(open)} onClose={() => onOpen(null)}>
@@ -61,12 +66,12 @@ export function CalendarView({ month, today, days, open, onOpen, onMonth }: { mo
 }
 export function Calendar({ month }: { month?: string }) {
   const today = dayKey(useNow()), m = month ?? today.slice(0, 7), [open, setOpen] = useState<string | null>(null);
-  const days = useLiveQuery(async () => {
+  const { days, spans } = useLiveQuery(async () => {
     const first = m + '-01', last = m + '-31';
     const [moments, entries, rows] = await Promise.all([db.moments.where('day').between(first, last, true, true).toArray(), db.entries.where('day').between(first, last, true, true).toArray(), db.days.where('day').between(first, last, true, true).toArray()]);
-    return buildMonthDays(moments, entries, rows);
-  }, [m]) ?? {};
-  return <CalendarView month={m} today={today} days={days} open={open} onOpen={setOpen} onMonth={mm => go({ name: 'cal', month: mm })} />;
+    return { days: buildMonthDays(moments, entries, rows), spans: (await db.spans.toArray()).filter(sp => sp.from <= last && sp.to >= first).sort((a, b) => a.from.localeCompare(b.from)) };
+  }, [m]) ?? { days: {}, spans: [] };
+  return <CalendarView month={m} today={today} days={days} spans={spans} open={open} onOpen={setOpen} onMonth={mm => go({ name: 'cal', month: mm })} />;
 }
 
 /* Every day with anything kept: moments, a set day overall, or just lines. */

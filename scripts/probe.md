@@ -10,8 +10,10 @@ text size at its largest (or `document.documentElement.style.fontSize = '150%'`)
 ```js
 (() => { const small = [], tiny = []; document.querySelectorAll('#app-root *').forEach(e => { if (e.closest('svg') || e.tagName === 'CANVAS') return; const r = e.getBoundingClientRect(); if (!r.width) return;
   const own = [...e.childNodes].some(n => n.nodeType === 3 && n.textContent.trim()); if (own && parseFloat(getComputedStyle(e).fontSize) < 12.95) small.push(e.className);
-  if (e.matches('button, input:not([type=file]), textarea') && !e.matches('.tagchip, .mention, .feelchip') && (r.height < 43.5 || r.width < 43.5)) tiny.push(e.className); });
+  if (e.matches('button, input:not([type=file]):not(.toggle input), textarea') && !e.matches('.tagchip, .mention, .feelchip') && (r.height < 43.5 || r.width < 43.5)) tiny.push(e.className); });
   const c = document.querySelector('.content'); return { small, tiny, over: c.scrollWidth > c.clientWidth + 1 }; })()
 ```
 
 Tags, names and feelings inside sentences may be 36 px (the usual allowance for links within text); everything else is 44 px or more.
+
+Checkboxes sit inside a whole-row `label.toggle` (44 px tall), which is the real tap target, so the probe skips them.
