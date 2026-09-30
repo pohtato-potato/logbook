@@ -18,7 +18,16 @@ const PATHS = {
  "photo": "<rect x=\"3.5\" y=\"5.5\" width=\"17\" height=\"13\" rx=\"2.5\"/><circle cx=\"9\" cy=\"10.5\" r=\"1.8\"/><path d=\"M4 17l5-4.5 4 3.5 3-2.5 4 3.5\"/>",
  "down": "<path d=\"M6 9.5l6 6 6-6\"/>",
  "up": "<path d=\"M6 14.5l6-6 6 6\"/>",
- "close": "<path d=\"M6.5 6.5l11 11M17.5 6.5l-11 11\"/>"
+ "close": "<path d=\"M6.5 6.5l11 11M17.5 6.5l-11 11\"/>",
+ "k-feeling": "<circle cx=\"12\" cy=\"12\" r=\"4\"/><path d=\"M12 3v2M12 19v2M3 12h2M19 12h2\"/>",
+ "k-media": "<rect x=\"4\" y=\"4\" width=\"16\" height=\"16\" rx=\"2.5\"/><path d=\"M8 4v16M16 4v16M4 9h4M4 15h4M16 9h4M16 15h4\"/>",
+ "k-quote": "<path d=\"M9 7c-3 1-4.5 3.5-4.5 6.5V17H9v-4H6.8M19 7c-3 1-4.5 3.5-4.5 6.5V17H19v-4h-2.2\"/>",
+ "k-place": "<path d=\"M12 21s-6.5-6.2-6.5-11a6.5 6.5 0 0 1 13 0C18.5 14.8 12 21 12 21z\"/><circle cx=\"12\" cy=\"10\" r=\"2.3\"/>",
+ "k-person": "<circle cx=\"12\" cy=\"8.5\" r=\"3.5\"/><path d=\"M5 20c.8-3.8 3.6-6 7-6s6.2 2.2 7 6\"/>",
+ "k-keep": "<path d=\"M4 7.5h16v3a2 2 0 0 0 0 3v3H4v-3a2 2 0 0 0 0-3z\"/><path d=\"M14.5 7.5v9\" stroke-dasharray=\"1.5 2\"/>",
+ "k-voice": "<rect x=\"9\" y=\"3.5\" width=\"6\" height=\"11\" rx=\"3\"/><path d=\"M5.5 11.5a6.5 6.5 0 0 0 13 0M12 18v2.5\"/>",
+ "k-span": "<path d=\"M4 12h16M4 8v8M20 8v8\"/>",
+ "k-past": "<path d=\"M4.5 12a7.5 7.5 0 1 0 2.2-5.3M4.5 4.5v3.2h3.2\"/><path d=\"M12 8v4.3l2.8 1.7\"/>"
 } as const;
 export type IconName = keyof typeof PATHS;
 export function Icon({ name }: { name: IconName }) {

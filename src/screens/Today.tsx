@@ -39,9 +39,9 @@ export type TodayProps = { now: Date; greeting: string; night: boolean; entries:
 export function TodayView(p: TodayProps) {
   const own = p.own ?? {}, ov = p.overall ?? (p.suggested ? { ...p.suggested, set: false } : undefined), todayFamily = p.suggested?.family ?? 'calm';
   const header = <header className="thead onwall"><div className="hrow"><div className="hdate"><h1 className="tdate">{parseDay(dayKey(p.now)).toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })}</h1></div>
-    <div className="hbtns"><button type="button" className="iconbtn" aria-label="Settings" onClick={() => go({ name: 'settings' })}><Icon name="sliders" /></button></div></div><p className="voice">{p.greeting}</p></header>;
+    <div className="hbtns"><button type="button" className="iconbtn" aria-label="Search" onClick={() => go({ name: 'search' })}><Icon name="search" /></button><button type="button" className="iconbtn" aria-label="Settings" onClick={() => go({ name: 'settings' })}><Icon name="sliders" /></button></div></div><p className="voice">{p.greeting}</p></header>;
   const kept = p.entries.length ? <section className="panel"><h2 className="lbl">Kept today</h2>{[...p.entries].sort((a, b) => b.at - a.at).map(e => <KeptCard key={e.id} entry={e} lookup={p.lookup ?? EMPTY_LOOKUP} own={own} thumbs={p.thumbs} tagHistory={p.tagHistory} todayFamily={todayFamily}
-    onOpenFeeling={w => p.onOpenFeeling(w, { kind: 'entry', id: e.id! })} onMenu={p.onEntryMenu} />)}</section> : null;
+    onOpenFeeling={w => p.onOpenFeeling(w, { kind: 'entry', id: e.id! })} onOpenTag={tag => go({ name: 'tag', tag })} onOpenPerson={i => go({ name: 'person', id: p.lookup?.people.get(i)?.id ?? i.toLowerCase() })} onMenu={p.onEntryMenu} />)}</section> : null;
   const weather = <section className="panel" aria-labelledby="h-weather"><h2 className="lbl" id="h-weather">Inner weather</h2>
     {p.moments.length ? <div className="moms" role="list">{[...p.moments].sort((a, b) => a.at - b.at).map(m => <button key={m.id} type="button" className="mom" onClick={() => p.onOpenFeeling(m.word, { kind: 'moment', id: m.id! })} aria-label={`${timeLabel(new Date(m.at))}, ${m.word}. Open its card`}>
       <Form family={m.family} second={m.second} label={FAMILY_NAME[m.family]} /><b>{timeLabel(new Date(m.at)).replace(/ (am|pm)/, '')}</b><i>{m.word}</i></button>)}</div>
