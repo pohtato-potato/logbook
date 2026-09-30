@@ -5,6 +5,8 @@ import '@fontsource/atkinson-hyperlegible/700.css';
 import '@fontsource/atkinson-hyperlegible/400-italic.css';
 import '@fontsource-variable/archivo/wdth.css';
 import { App } from './App';
+import { consumeShare } from './share';
+consumeShare();
 import './styles/tokens.css';
 import './styles/app.css';
 import './styles/app-2a.css';

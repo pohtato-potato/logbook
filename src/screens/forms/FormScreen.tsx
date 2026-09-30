@@ -30,7 +30,7 @@ const words = (d: string) => parseDay(d).toLocaleDateString('en-GB', { day: 'num
 export function FormScreen({ kind }: { kind: FormKind }) {
   const now = useNow(), keep = useKeeper(), undo = useUndo(), sub = `It lands in today, at ${timeLabel(new Date())}`;
   const data = useLiveQuery(async () => ({ people: await db.people.toArray(), places: await db.places.toArray(), homes: (await getSettings(db)).homes }), []);
-  const [media, setMedia] = useForm<MediaState>({ media: 'Film', title: '', rating: 5, current: false, note: '' });
+  const [media, setMedia] = useForm<MediaState>({ media: 'Film', title: (() => { try { const t = sessionStorage.getItem('logbook-media-title') ?? ''; sessionStorage.removeItem('logbook-media-title'); return t; } catch { return ''; } })(), rating: 5, current: false, note: '' });
   const [quote, setQuote] = useForm<QuoteState>({ text: '', who: 'Overheard', where: '' });
   const [place, setPlace] = useForm<PlaceState>({ name: '', first: false });
   const [pos, setPos] = useState<{ lat: number; lon: number } | null>(null), [locating, setLocating] = useState(false), [placeErr, setPlaceErr] = useState('');

@@ -16,6 +16,7 @@ export const dateRange = (a: string, b: string) => { const x = dm(a), y = dm(b),
 export const DOING = { Film: 'watching', Series: 'watching', Book: 'reading', Game: 'playing', Album: 'listening', Other: 'on it' } as const;
 export const HOW_VERB = { 'In person': 'Saw', Call: 'Called', Messages: 'Messaged' } as const;
 export const QUOTE_WHO = (lk: Lookup, who: string) => who === 'Overheard' ? 'overheard' : who === 'A book or film' ? 'from a book or film' : personName(lk, who);
+export const hostOf = (u: string) => { try { return u ? new URL(u).host : ''; } catch { return ''; } };
 export const minSec = (s: number) => `${Math.floor(s / 60)}:${String(Math.round(s % 60)).padStart(2, '0')}`;
 /* One plain sentence for any entry: the same words on cards, in the Markdown export and in search. */
 export function entryLine(e: Entry, lk: Lookup): string {
@@ -30,5 +31,6 @@ export function entryLine(e: Entry, lk: Lookup): string {
     case 'voice': return `Voice note, ${minSec(d.seconds)}.${tail}`;
     case 'span': { const s = lk.spans.get(d.spanId); return s ? `Span: ${s.name}, ${dateRange(s.from, s.to)}.` : 'Span: a span that was removed.'; }
     case 'past': return `Written later: ${text}`;
+    case 'link': return `Link: ${d.title || hostOf(d.url) || 'a shared link'}.${tail}`;
   }
 }

@@ -1,14 +1,17 @@
 import type { DayRow, Entry, Moment } from '../db/types';
 import { FAMILY_NAME, ladderName } from '../vocab/vocab';
 import { weatherLine } from './stamps';
+import { safeUrl } from '../share';
 import { airWords } from './aqi';
-import { EMPTY_LOOKUP, entryLine, plainWords, type Lookup } from './entryText';
+import { EMPTY_LOOKUP, entryLine, hostOf, plainWords, type Lookup } from './entryText';
 import { localDate, parseDay, timeLabel, timeLabelIn } from './day';
 
 const MARK_WORD = { first: 'first', gift: 'gift', priv: 'private', quiet: 'don’t bring back' } as const;
 export { plainWords };
 /* The day's files in the export, as paths relative to the zip's root. */
 export type DayFiles = { photos: { path: string; potd: boolean }[]; audio: Map<number, string>; keepPhotos?: Map<number, string> };
+/* A kept link becomes a real Markdown link, but only for a web address. */
+const webLink = (e: Entry, line: string) => { if (e.data?.kind !== 'link') return line; const u = safeUrl(e.data.url), label = e.data.title || hostOf(e.data.url) || 'a shared link'; return u ? line.replace(`Link: ${label}.`, `Link: [${label.replace(/[[\]]/g, '')}](${u}).`) : line; };
 const keepLink = (e: Entry, line: string, path?: string) => (path && e.data?.kind === 'keep' ? `${line} ![Keepsake](../../${path})` : line);
 const written = (ms: number) => parseDay(localDate(ms)).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
 const voiceLink = (e: Entry, line: string, path?: string) => (path && e.data?.kind === 'voice' ? line.replace(/^(Voice note, [0-9:]+)\./, `[$1](../../${path}).`) : line);
@@ -27,7 +30,7 @@ export function dayToMarkdown(day: string, row: DayRow | undefined, entries: Ent
   fm.push('---', '');
   const body: string[] = [];
   [...entries].sort((a, b) => a.at - b.at).forEach(e => {
-    const line = keepLink(e, voiceLink(e, entryLine(e, lk), files.audio.get(e.id!)), files.keepPhotos?.get(e.id!));
+    const line = webLink(e, keepLink(e, voiceLink(e, entryLine(e, lk), files.audio.get(e.id!)), files.keepPhotos?.get(e.id!)));
     if (e.data?.kind === 'past') body.push('## Written later', '', line.replace(/^Written later: /, ''), '', `Written on ${written(e.writtenAt)}`, '');
     else body.push(`## ${timeLabelIn(e.at, e.tz)}`, '', line, '');
     const marks = (Object.keys(MARK_WORD) as (keyof typeof MARK_WORD)[]).filter(k => e.marks[k]).map(k => MARK_WORD[k]);

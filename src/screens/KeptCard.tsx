@@ -4,7 +4,8 @@ import { localDate, parseDay, timeLabelIn } from '../domain/day';
 import { tokenize } from '../domain/line';
 import { tagFamily, PERSON_THREADS } from '../domain/colour';
 import { ratingText } from '../domain/rating';
-import { DOING, HOW_VERB, QUOTE_WHO, dateRange, minSec, personName, type Lookup } from '../domain/entryText';
+import { DOING, HOW_VERB, QUOTE_WHO, dateRange, hostOf, minSec, personName, type Lookup } from '../domain/entryText';
+import { safeUrl } from '../share';
 import { FAMILY_NAME, feelingOf, type Family } from '../vocab/vocab';
 import { FeelingChip, TagChip } from '../ui/Chips';
 import { Icon } from '../ui/Icons';
@@ -57,6 +58,8 @@ function KeptCardOpen(p: KeptCardProps) {
     case 'voice': body = <><p className="entry"><b>Voice note</b> · {minSec(d.seconds)}</p><BlobAudio blob={d.audio} label={`Voice note, ${minSec(d.seconds)}`} />{e.text && rich(e.text)}</>; break;
     case 'span': { const s = p.lookup.spans.get(d.spanId); body = s ? <><p className="entry"><b>Span:</b> {s.name}</p><p className="entry spanline"><i style={{ background: look.pal[s.family] }} aria-hidden="true" />{dateRange(s.from, s.to)} · {FAMILY_NAME[s.family]}</p></> : <p className="entry"><b>Span:</b> a span that was removed</p>; break; }
     case 'past': body = rich(e.text); break;
+    case 'link': { const safe = safeUrl(d.url), host = hostOf(d.url);
+      body = <><p className="entry"><b>Link:</b> {d.title || host || 'a shared link'}</p>{host && (safe ? <p className="entry"><a href={safe} target="_blank" rel="noopener noreferrer">{host}</a></p> : <p className="hint">{host}</p>)}{e.text && rich(e.text)}</>; break; }
   }
   const marks = (Object.keys(MARK_LABEL) as (keyof typeof MARK_LABEL)[]).filter(k => e.marks[k] || (k === 'first' && (d?.kind === 'place' && d.first)));
   return <div className="ent"><div className="ent-top"><div className="ent-body">{body}</div>

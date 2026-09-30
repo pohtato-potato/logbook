@@ -1,6 +1,6 @@
 import type { Family } from '../vocab/vocab';
 export type Marks = { first?: boolean; gift?: boolean; priv?: boolean; quiet?: boolean };
-export type EntryKind = 'line' | 'media' | 'quote' | 'place' | 'person' | 'keep' | 'voice' | 'span' | 'past';
+export type EntryKind = 'line' | 'media' | 'quote' | 'place' | 'person' | 'keep' | 'voice' | 'span' | 'past' | 'link';
 export type MediaKind = 'Film' | 'Series' | 'Book' | 'Game' | 'Album' | 'Other';
 export type How = 'In person' | 'Call' | 'Messages';
 /* What each kind keeps beyond its words. A line has none. */
@@ -12,7 +12,8 @@ export type EntryData =
   | { kind: 'keep'; photoId?: number }
   | { kind: 'voice'; audio: Blob; seconds: number; type: string }
   | { kind: 'span'; spanId: number }
-  | { kind: 'past' };
+  | { kind: 'past' }
+  | { kind: 'link'; url: string; title?: string }; // url is '' when it wasn't a web address
 /* text holds the entry's own words: the line, the quote, a note on a film, the keepsake's name. */
 export type Entry = { id?: number; day: string; at: number; tz: string; kind: EntryKind; text: string; marks: Marks; tags: string[]; people: string[]; writtenAt: number; data?: EntryData };
 export type Photo = { id?: number; day: string; blob: Blob; thumb: Blob; takenAt?: number; addedAt: number };
