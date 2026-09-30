@@ -12,7 +12,7 @@ export function glow(ctx: Ctx, x: number, y: number, R: number, c: string, a: nu
   ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, R, 0, Math.PI * 2); ctx.fill();
 }
 export function dot(ctx: Ctx, x: number, y: number, s: number, fill: string) { ctx.fillStyle = fill; ctx.beginPath(); ctx.arc(x, y, Math.max(0.6, s), 0, Math.PI * 2); ctx.fill(); }
-function twinkle(ctx: Ctx, x: number, y: number, s: number, col: string) { ctx.strokeStyle = col; ctx.lineWidth = Math.max(0.8, s * 0.22); ctx.beginPath(); ctx.moveTo(x - s, y); ctx.lineTo(x + s, y); ctx.moveTo(x, y - s); ctx.lineTo(x, y + s); ctx.stroke(); dot(ctx, x, y, s * 0.28, col); }
+export function twinkle(ctx: Ctx, x: number, y: number, s: number, col: string) { ctx.strokeStyle = col; ctx.lineWidth = Math.max(0.8, s * 0.22); ctx.beginPath(); ctx.moveTo(x - s, y); ctx.lineTo(x + s, y); ctx.moveTo(x, y - s); ctx.lineTo(x, y + s); ctx.stroke(); dot(ctx, x, y, s * 0.28, col); }
 function formCols(look: Look, fam: Family) { const c = look.pal[fam], dark = look.theme === 'dark'; return { c, dark, lite: dark ? mix(c, '#FFFFFF', 0.45) : mix(c, '#000000', 0.14), ga: dark ? 0.32 : 0.26 }; }
 
 type FormFn = (ctx: Ctx, look: Look, x: number, y: number, r: number, t: number) => void;
