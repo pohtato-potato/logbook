@@ -5,6 +5,9 @@ import { CalendarView } from '../src/screens/Calendar';
 import { YearView } from '../src/screens/calendar/Year';
 import { GalleryView } from '../src/screens/calendar/Gallery';
 import { LifeView } from '../src/screens/calendar/Life';
+import { FeelingsView } from '../src/screens/calendar/Feelings';
+import { drawClock } from '../src/draw/clock';
+import { lookOf } from '../src/draw/forms';
 import { yearDays } from '../src/domain/looking';
 
 describe('calendar tabs', () => {
@@ -48,6 +51,26 @@ describe('gallery and life', () => {
   it('life: year, text, written later, and a way to add more; a kind empty state', () => {
     expect(renderToStaticMarkup(<LifeView items={[{ year: 2019, day: '2019-06-14', text: 'Graduation', later: true }]} onAdd={() => {}} />)).toMatch(/2019[^]*Graduation[^]*Written later[^]*Add something from before/);
     expect(renderToStaticMarkup(<LifeView items={[]} onAdd={() => {}} />)).toContain('Your life’s big days gather here');
+  });
+});
+describe('feelings tab', () => {
+  const counts = { bright: 0, proud: 0, curious: 0, calm: 2, warm: 3, wistful: 0, low: 0, tense: 0, heated: 0 };
+  const empty = Array.from({ length: 24 }, (_, hour) => ({ hour, parts: [] as never[], count: 0 }));
+  const base = { month: '2026-09', stats: { counts, total: 5, top: ['warm', 'calm'] as never }, words: [['calm', { family: 'calm', n: 2 }]] as never, mix: empty, often: [], withPeople: [], onSel() {}, daysWith: ['2026-09-03'] };
+  it('the nine with counts, words, a clock in words, and kind empty states', () => {
+    const html = renderToStaticMarkup(<FeelingsView {...base} sel={{ kind: 'fam', key: 'warm' }} />);
+    expect(html).toContain('Mostly warm and calm this month.'); expect(html).toContain('3 moments'); expect(html).toContain('calm · 2');
+    expect(html).toMatch(/1 day<\/b> had some warm in them/); expect(html).toContain('Too few moments yet to see a pattern through the day.');
+    expect(html).toContain('No tags on two or more days yet.'); expect(html).toContain('No days with people yet.'); expect(html).not.toMatch(/NaN|Infinity|undefined/);
+    expect(html).toMatch(/aria-pressed="true"[^>]*>[^]*Warm/); expect(html).toContain(', lit');
+  });
+  it('a chosen word says how many days and what it means', () => {
+    const html = renderToStaticMarkup(<FeelingsView {...base} sel={{ kind: 'word', key: 'calm' }} daysWith={['2026-09-03', '2026-09-05']} />);
+    expect(html).toMatch(/2 days<\/b> you felt calm\./); expect(html).toContain('Steady; nothing pulling at you.');
+  });
+  it('the clock draws with no moments without errors', () => {
+    const ctx = new Proxy({}, { get: () => (...a: number[]) => { if (a.some(v => typeof v === 'number' && !Number.isFinite(v))) throw new Error('bad'); }, set: () => true }) as unknown as CanvasRenderingContext2D;
+    drawClock(ctx, lookOf('dark'), 320, 270, empty);
   });
 });
 
