@@ -17,6 +17,8 @@ import { suggestedOverall } from './Today';
 import { KeptCard } from './KeptCard';
 import { FeelingCard } from './FeelingCard';
 import { EntryMenu } from './EntryMenu';
+import { StampsPanelView, type StampsProps } from './Stamps';
+import { useStamps } from '../ui/useStamps';
 import { useState } from 'react';
 import { go } from '../router';
 
@@ -26,7 +28,7 @@ export const toDayMoments = (ms: Moment[]): DayMoment[] => [...ms].sort((a, b) =
   return { h: h < 4 ? h + 24 : h, family: m.family, second: m.second, strength: m.strength };
 });
 /* The day page: the picture on top, and the story underneath as the one place each moment is read. */
-export function DayPageView({ day, style, entries, moments, overall, own, lookup = EMPTY_LOOKUP, thumbs, onOpenFeeling, onEntryMenu }: { day: string; style: 'bloom' | 'score'; entries: Entry[]; moments: Moment[]; overall?: DayRow['overall']; own: Record<string, Family>; lookup?: Lookup; thumbs?: Map<number, Blob>; onOpenFeeling?(word: string, entryId: number): void; onEntryMenu?(id: number): void }) {
+export function DayPageView({ day, style, entries, moments, overall, own, lookup = EMPTY_LOOKUP, thumbs, onOpenFeeling, onEntryMenu, stamps }: { day: string; style: 'bloom' | 'score'; entries: Entry[]; moments: Moment[]; overall?: DayRow['overall']; own: Record<string, Family>; lookup?: Lookup; thumbs?: Map<number, Blob>; onOpenFeeling?(word: string, entryId: number): void; onEntryMenu?(id: number): void; stamps?: StampsProps }) {
   const look = useLook(), dms = toDayMoments(moments), ov = overall ?? (() => { const s = suggestedOverall(moments); return s ? { ...s, set: false } : undefined; })();
   const fam: Family = ov?.family ?? dms[0]?.family ?? 'calm';
   const items: { at: number; node: ReactNode }[] = [
@@ -48,17 +50,19 @@ export function DayPageView({ day, style, entries, moments, overall, own, lookup
       {style === 'score' && <p className="hint">Placed only by time. Bigger marks were felt more strongly.</p>}
       <section className="panel story" aria-label="The day, moment by moment" style={{ ['--daygrad' as string]: `linear-gradient(${moments.map(m => look.pal[m.family]).join(', ') || look.pal[fam]}, ${look.pal[fam]})` }}>{items.map(i => i.node)}</section>
     </>}
+    {stamps && <StampsPanelView {...stamps} title="The day’s stamps" />}
   </div><Tabs current="cal" /></div>;
 }
 export function DayPage({ day }: { day: string }) {
-  const [card, setCard] = useState<{ word: string; id: number } | null>(null), [menu, setMenu] = useState<number | null>(null);
+  const [card, setCard] = useState<{ word: string; id: number } | null>(null), [menu, setMenu] = useState<number | null>(null), [open, setOpen] = useState(false), st = useStamps(day);
   const data = useLiveQuery(async () => ({
     entries: await db.entries.where('day').equals(day).toArray(), moments: await db.moments.where('day').equals(day).toArray(), row: await db.days.get(day), settings: await getSettings(db),
     own: Object.fromEntries((await db.words.toArray()).map(w => [w.word, w.family])) as Record<string, Family>, lookup: await loadLookup(db),
     thumbs: new Map((await db.photos.where('day').equals(day).toArray()).map(ph => [ph.id!, ph.thumb])),
   }), [day]);
   if (!data) return <div className="scr" />;
-  return <><DayPageView day={day} style={data.settings.dayStyle} entries={data.entries} moments={data.moments} overall={data.row?.overall} own={data.own} lookup={data.lookup} thumbs={data.thumbs} onOpenFeeling={(word, id) => setCard({ word, id })} onEntryMenu={setMenu} />
+  return <><DayPageView day={day} style={data.settings.dayStyle} entries={data.entries} moments={data.moments} overall={data.row?.overall} own={data.own} lookup={data.lookup} thumbs={data.thumbs} onOpenFeeling={(word, id) => setCard({ word, id })} onEntryMenu={setMenu}
+      stamps={{ list: st.list, status: st.status, open, onToggle: () => setOpen(!open), onWhere: () => {}, canLocate: false, placeSource: st.pos?.source }} />
     {menu != null && <EntryMenu id={menu} onClose={() => setMenu(null)} />}
     {card && <FeelingCard word={card.word} src={{ kind: 'entry', id: card.id }} own={data.own} onClose={() => setCard(null)} />}</>;
 }

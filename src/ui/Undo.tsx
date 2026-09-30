@@ -9,7 +9,7 @@ export const useUndo = () => useContext(Ctx);
 /* What a failed save says: a known reason in its own words, anything else in general terms. */
 export function failMessage(e: unknown): string {
   if (e instanceof StorageFullError) return 'The phone is out of space, so that wasn’t saved. Nothing else changed.';
-  if ((e as Error)?.name === 'NotAnImageError') return (e as Error).message;
+  if ((e as Error)?.name === 'NotAnImageError' || (e as Error)?.name === 'PlainMessage') return (e as Error).message; // a known reason, already in plain words
   return 'That didn’t save. Nothing else changed; try again.';
 }
 export function UndoProvider({ children }: { children: ReactNode }) {

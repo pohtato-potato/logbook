@@ -22,3 +22,9 @@ body:has(.pinbar) .toast{bottom:calc(1rem * 9)}
 /* A title inside a list item that opens its day: looks like the title, tappable like a button. */
 .linkish{background:none; border:0; padding:0; color:inherit; font:inherit; text-align:left; cursor:pointer; min-height:var(--tap)}
 .pitem .linkish b{text-decoration:underline; text-decoration-thickness:1px; text-underline-offset:3px}
+/* Stamps (ported from p7-phone.css:159-162, round-8 sizes). */
+.stamps{display:grid; grid-template-columns:1fr 1fr; gap:6px}
+.stamps.one{grid-template-columns:1fr}
+.stamp{background:var(--tag); border-radius:12px; padding:8px 10px; font-size:var(--f14); line-height:1.35; margin:0}
+.stamp b{display:block; font-size:var(--f13); color:var(--muted)}
+html[data-big-text] .stamps{grid-template-columns:1fr}

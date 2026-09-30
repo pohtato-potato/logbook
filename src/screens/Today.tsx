@@ -16,6 +16,10 @@ import { VOICES } from '../domain/voices';
 import { LineWriter } from './LineWriter';
 import { FeelingCard, type FeelingSource } from './FeelingCard';
 import { KeptCard } from './KeptCard';
+import { OutsideLine, StampsPanelView, type StampsProps } from './Stamps';
+import { useStamps } from '../ui/useStamps';
+import { addWhereToday } from '../db/stamps';
+import { roundCoord } from '../domain/geo';
 import { EntryMenu } from './EntryMenu';
 import { BlobImg } from '../ui/Blob';
 import { addPhotos, photosMessage, removePhoto } from '../db/photos';
@@ -34,12 +38,13 @@ export function suggestedOverall(moments: Moment[]) {
 export { RichText } from './KeptCard';
 export type TodayProps = { now: Date; greeting: string; night: boolean; entries: Entry[]; moments: Moment[]; overall?: DayRow['overall']; suggested?: { word: string; family: Family; strength: number }; grateful?: string; foldedOpen: boolean;
   own?: Record<string, Family>; tagHistory?: Record<string, Family[]>; lookup?: Lookup; thumbs?: Map<number, Blob>;
+  stamps?: StampsProps;
   photos?: { id: number; thumb: Blob }[]; potd?: number; onPickPhotos?(files: File[]): void; onPotd?(id: number): void; onPhotoMenu?(id: number): void;
   onToggleFold(): void; onConfirmOverall(): void; onChangeOverall(): void; onOpenFeeling(word: string, src: FeelingSource): void; onEntryMenu(id: number): void; writer: ReactNode };
 /* Today. At night (12 to 5 am) it holds only the line, inner weather and the day overall; the rest folds into one row. */
 export function TodayView(p: TodayProps) {
   const own = p.own ?? {}, ov = p.overall ?? (p.suggested ? { ...p.suggested, set: false } : undefined), todayFamily = p.suggested?.family ?? 'calm';
-  const header = <header className="thead onwall"><div className="hrow"><div className="hdate"><h1 className="tdate">{parseDay(dayKey(p.now)).toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })}</h1></div>
+  const header = <header className="thead onwall"><div className="hrow"><div className="hdate"><h1 className="tdate">{parseDay(dayKey(p.now)).toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })}</h1>{p.stamps && <OutsideLine list={p.stamps.list} />}</div>
     <div className="hbtns"><button type="button" className="iconbtn" aria-label="Search" onClick={() => go({ name: 'search' })}><Icon name="search" /></button><button type="button" className="iconbtn" aria-label="Settings" onClick={() => go({ name: 'settings' })}><Icon name="sliders" /></button></div></div><p className="voice">{p.greeting}</p></header>;
   const kept = p.entries.length ? <section className="panel"><h2 className="lbl">Kept today</h2>{[...p.entries].sort((a, b) => b.at - a.at).map(e => <KeptCard key={e.id} entry={e} lookup={p.lookup ?? EMPTY_LOOKUP} own={own} thumbs={p.thumbs} tagHistory={p.tagHistory} todayFamily={todayFamily}
     onOpenFeeling={w => p.onOpenFeeling(w, { kind: 'entry', id: e.id! })} onOpenTag={tag => go({ name: 'tag', tag })} onOpenPerson={i => go({ name: 'person', id: p.lookup?.people.get(i)?.id ?? i.toLowerCase() })} onMenu={p.onEntryMenu} />)}</section> : null;
@@ -61,13 +66,14 @@ export function TodayView(p: TodayProps) {
     <button type="button" className="btn wide" onClick={() => pick.current?.click()}><Icon name="photo" />Add from your phone</button>
     <input ref={pick} type="file" accept="image/*" multiple hidden onChange={e => { const fs = [...(e.target.files ?? [])]; e.target.value = ''; if (fs.length) p.onPickPhotos?.(fs); }} /></section>;
   const grateful = <section className="panel"><h2 className="lbl">Grateful for</h2><p className="entry">{p.grateful || <span className="hint">One small thing, when you feel like it.</span>}</p></section>;
-  const sofar = p.foldedOpen ? <>{photoPanel}{grateful}<button type="button" className="btn ghost wide" aria-expanded="true" onClick={p.onToggleFold}><Icon name="up" />Fold away</button></>
-    : <button type="button" className="sofar" aria-expanded="false" onClick={p.onToggleFold}><span className="sf-l">Today so far</span><span className="sf-s">{photos.length ? `${photos.length} photo${photos.length === 1 ? '' : 's'} · ` : ''}grateful for</span><span className="sf-i"><Icon name="down" /></span></button>;
-  return <div className="scr"><div className="content scroll">{header}{p.writer}{kept}{p.night ? null : photoPanel}{weather}{p.night ? sofar : grateful}</div><Tabs current="today" /></div>;
+  const stampPanel = p.stamps ? <StampsPanelView {...p.stamps} /> : null;
+  const sofar = p.foldedOpen ? <>{photoPanel}{stampPanel}{grateful}<button type="button" className="btn ghost wide" aria-expanded="true" onClick={p.onToggleFold}><Icon name="up" />Fold away</button></>
+    : <button type="button" className="sofar" aria-expanded="false" onClick={p.onToggleFold}><span className="sf-l">Today so far</span><span className="sf-s">{photos.length ? `${photos.length} photo${photos.length === 1 ? '' : 's'} · ` : ''}grateful for{p.stamps ? ' · stamps' : ''}</span><span className="sf-i"><Icon name="down" /></span></button>;
+  return <div className="scr"><div className="content scroll">{header}{p.writer}{kept}{p.night ? null : photoPanel}{weather}{p.night ? null : stampPanel}{p.night ? sofar : grateful}</div><Tabs current="today" /></div>;
 }
 const skippedFirstRun = () => { try { return !!localStorage.getItem('logbook-first-run-skipped'); } catch { return false; } };
 export function Today() {
-  const now = useNow(), day = dayKey(now), undo = useUndo();
+  const now = useNow(), day = dayKey(now), undo = useUndo(), st = useStamps(day), [stampsOpen, setStampsOpen] = useState(false);
   const [open, setOpen] = useState(false), [card, setCard] = useState<{ word: string; src: FeelingSource } | null>(null), [menu, setMenu] = useState<number | null>(null), [photoMenu, setPhotoMenu] = useState<number | null>(null);
   const remover = useRef<((w: string) => void) | null>(null);
   const data = useLiveQuery(async () => {
@@ -83,7 +89,11 @@ export function Today() {
   if (!data || needsFirstRun) return <div className="scr" />;
   const suggested = suggestedOverall(data.moments);
   return <>
-    <TodayView now={now} greeting={VOICES[data.settings.voice % VOICES.length].greeting} night={isNight(now)} entries={data.entries} moments={data.moments} overall={data.row?.overall} suggested={suggested} grateful={data.row?.grateful} own={data.own} tagHistory={data.tagHistory} lookup={data.lookup} thumbs={new Map(data.photos.map(ph => [ph.id, ph.thumb]))} photos={data.photos} potd={data.row?.potd}
+    <TodayView now={now} greeting={VOICES[data.settings.voice % VOICES.length].greeting} night={isNight(now)} entries={data.entries} moments={data.moments} overall={data.row?.overall} suggested={suggested} grateful={data.row?.grateful} own={data.own} tagHistory={data.tagHistory} lookup={data.lookup}
+      stamps={{ list: st.list, status: st.status, open: stampsOpen, onToggle: () => setStampsOpen(!stampsOpen), canLocate: typeof navigator !== 'undefined' && 'geolocation' in navigator, placeSource: st.pos?.source,
+        onWhere: () => navigator.geolocation.getCurrentPosition(async p => { try { undo.show(await addWhereToday(db, day, { lat: roundCoord(p.coords.latitude), lon: roundCoord(p.coords.longitude) }), 'Added where you are today.'); st.refresh(); } catch (e) { undo.fail(e); } },
+          () => undo.fail(Object.assign(new Error('Logbook couldn’t get your position. Weather uses your home instead.'), { name: 'PlainMessage' })), { maximumAge: 60_000, timeout: 15_000 }) }}
+      thumbs={new Map(data.photos.map(ph => [ph.id, ph.thumb]))} photos={data.photos} potd={data.row?.potd}
       onPickPhotos={async files => { try { const r = await addPhotos(db, files, new Date());
         if (r.added) undo.show(r.undo, photosMessage(r.added, r.failed)); else undo.fail(Object.assign(new Error(photosMessage(0, r.failed)), { name: 'NotAnImageError' })); } catch (e) { undo.fail(e); } }}
       onPotd={async id => { try { undo.show(await setPhotoOfDay(db, day, id), 'That’s the photo of the day now.'); } catch (e) { undo.fail(e); } }} onPhotoMenu={setPhotoMenu}
