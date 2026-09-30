@@ -84,7 +84,7 @@ export function LineWriter({ own, people, tags, onOpenFeeling, removerRef }: { o
     <h2 className="lbl" id="h-line">Today’s line</h2>
     <div className="composer">
       <div className="hl" aria-hidden="true" dangerouslySetInnerHTML={{ __html: highlight(text, own, people, pal) }} />
-      <textarea ref={ta} value={text} placeholder="Today in a line, or a few…" aria-label="Today’s line" aria-describedby="h-hint"
+      <textarea data-write ref={ta} value={text} placeholder="Today in a line, or a few…" aria-label="Today’s line" aria-describedby="h-hint"
         onChange={e => { setText(e.target.value); suggest(e.target.value, e.target.selectionStart); }} onClick={onClick} onKeyDown={onKeyDown}
         onScroll={e => { const hl = e.currentTarget.previousElementSibling as HTMLElement | null; if (hl) hl.scrollTop = e.currentTarget.scrollTop; }}
         onBlur={() => setTimeout(() => setSugg(null), 150)} />

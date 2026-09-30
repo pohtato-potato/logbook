@@ -12,6 +12,7 @@ import './styles/app.css';
 import './styles/app-2a.css';
 import './styles/app-2c.css';
 import './styles/app-3a.css';
+import './styles/app-desk.css';
 import './styles/app-extra.css';
 
 // Ask the browser not to clear Logbook's storage under pressure. It's fine if it says no.

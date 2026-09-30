@@ -8,7 +8,7 @@ export type StampsProps = { title?: string; list: [string, string][]; status: St
 export function StampsPanelView({ title = 'Today’s stamps', list, status, open, onToggle, onWhere, canLocate, placeSource, isToday = true }: StampsProps) {
   const say = !isToday && status === 'no-place' ? 'No place is known for this day. Homes from your starter file fill this in.' : STATUS[status];
   const shown = open ? list : list.slice(0, 4);
-  return <section className="panel"><h2 className="lbl">{title}</h2>
+  return <section className="panel stamppanel"><h2 className="lbl">{title}</h2>
     <div className="stamps">{shown.map(([k, v]) => <p key={k} className="stamp"><b>{k}</b>{v}</p>)}</div>
     {say && <p className="hint" role="status">{say}</p>}
     {list.length > 4 && <button type="button" className="btn ghost wide" aria-expanded={open} onClick={onToggle}>{open ? 'Show fewer' : `Show all ${list.length}`}</button>}
