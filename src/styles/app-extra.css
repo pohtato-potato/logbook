@@ -35,3 +35,5 @@ html[data-big-text] .stamps{grid-template-columns:1fr}
 /* A private entry while locked: present, quiet, and one tap from opening. */
 .ent.locked .entry{color:var(--muted)}
 .ent.locked .entry svg{width:1em; height:1em; vertical-align:-2px}
+/* Tab strips wrap onto a second row rather than hide a tab when the text is large. */
+.ctabs{flex-wrap:wrap; border-radius:22px}

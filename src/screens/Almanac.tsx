@@ -52,7 +52,7 @@ export function HeadlinesView({ today, value, suggestion, onValue, onKeep, weeks
       <input className="sinput" value={value} placeholder={suggestion} aria-label="This week in a line" onChange={e => onValue(e.target.value)} />
       <p className="hint">Logbook suggests one from your week if you leave it blank.</p>
       <button type="button" className="btn primary wide" disabled={!value.trim()} onClick={onKeep}>Keep this week’s line</button></section>
-    <section className="panel"><h2 className="lbl">Weeks</h2>{weeks.map(w => <div key={w.label} className="hline"><b>{w.label}</b><span>{w.line}{w.suggested && <i className="hint"> (suggested)</i>}</span></div>)}</section>
+    <section className="panel"><h2 className="lbl">Weeks</h2>{weeks.map(w => <div key={w.label} className="hline"><span aria-hidden="true" /><div><b>{w.label}</b><span>{w.line}{w.suggested && <i className="hint"> (suggested)</i>}</span></div></div>)}</section>
     <section className="panel"><h2 className="lbl">{year} in twelve lines, so far</h2>{months.map(m => <div key={m.month} className="hline">{m.family ? <Form family={m.family} /> : <span aria-hidden="true" />}<div><b>{m.month}</b><span>{m.line}</span></div></div>)}</section>
   </>;
 }

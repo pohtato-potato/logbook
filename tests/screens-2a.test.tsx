@@ -19,6 +19,12 @@ import { FeelingsView } from '../src/screens/calendar/Feelings';
 import { CalendarView } from '../src/screens/Calendar';
 import { PrivacyContext } from '../src/ui/Privacy';
 import { KeptCard } from '../src/screens/KeptCard';
+import { ReportView, HeadlinesView, RandomView, AlmanacView } from '../src/screens/Almanac';
+import { WrappedView } from '../src/screens/Wrapped';
+import { ShareSheetView } from '../src/screens/ShareSheet';
+import { DeskView } from '../src/screens/Desk';
+import { wrappedCards } from '../src/draw/cards';
+import { monthLines, yearReport } from '../src/domain/almanac';
 import { dayFamilies, hourMix, lifeItems, monthStats, oftenWith, peopleWith, wordCounts, yearDays } from '../src/domain/looking';
 import type { Entry, Person, Place, Span } from '../src/db/types';
 
@@ -82,6 +88,22 @@ describe('every Stage 2a screen renders cleanly, empty and full', () => {
       html.forEach(h => expect(h).not.toMatch(/undefined|NaN|Infinity|\[object Object\]/));
     }
     expect(fams.size).toBe(1);
+  });
+  it('the Almanac, Wrapped, sharing in and the reading room, empty and full', () => {
+    const ms = [{ id: 1, day: '2026-09-20', at: new Date('2026-09-20T09:00:00').getTime(), word: 'calm', family: 'calm' as const, strength: 3 }];
+    for (const [moments, es] of [[ms, entries], [[], []]] as const) {
+      const rep = yearReport(2026, { entries: [...es], moments: [...moments], rows: [], places, people: [A] }), days = yearDays(2026, dayFamilies([...moments], []));
+      const html = [
+        ...[0, 7].map(voice => renderToStaticMarkup(<ReportView report={rep} days={days} today="2026-09-29" voice={voice} topFamily="calm" />)),
+        renderToStaticMarkup(<HeadlinesView today="2026-09-29" value="" suggestion="A quiet week." onValue={noop} onKeep={noop} weeks={[]} months={monthLines(2026, [...es], [...moments], '2026-09-29')} year={2026} />),
+        renderToStaticMarkup(<RandomView pick={moments.length ? { day: '2026-09-20', family: 'calm', line: 'x' } : null} enough={!!moments.length} onAnother={noop} onOpen={noop} today="2026-09-29" then={null} now={null} />),
+        renderToStaticMarkup(<WrappedView month="2026-09" cards={wrappedCards('2026-09', [...es], [...moments], [A])} onSave={noop} />),
+        renderToStaticMarkup(<AlmanacView tab="report" mast={{ issue: 1, year: 2026, kept: 0 }}><p /></AlmanacView>),
+        ...[{ title: 'T', text: 'words', url: 'https://example.com' }, { title: '', text: '', url: 'javascript:x' }, null].map(sh => renderToStaticMarkup(<ShareSheetView shared={sh} as="link" line="" onAs={noop} onLine={noop} onKeep={noop} onCancel={noop} />)),
+        renderToStaticMarkup(<DeskView left={<p />} mid={<p />} right={<p />} />),
+      ];
+      html.forEach(h => expect(h).not.toMatch(/undefined|NaN|Infinity|\[object Object\]/));
+    }
   });
 });
 
