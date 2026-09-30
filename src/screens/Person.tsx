@@ -15,15 +15,16 @@ import { Tabs } from '../ui/Tabs';
 import { useUndo } from '../ui/Undo';
 import { go } from '../router';
 import { KeptCard } from './KeptCard';
+import { usePrivacy } from '../ui/Privacy';
 
 export type PersonFilter = 'all' | 'events' | 'feelings';
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 const dm = (d: string) => parseDay(d).toLocaleDateString('en-GB', { day: 'numeric', month: 'long' });
 const Back = () => <button type="button" className="back" aria-label="Back" onClick={() => history.back()}><Icon name="back" /></button>;
 /* A person page describes time together, in plain facts. Never "last seen N days ago", never "usually low". */
-export function PersonView({ person, stats, year, entries, lookup, filter, onFilter, onThread }: { person: P; stats: ReturnType<typeof togetherStats>; year: number; entries: Entry[]; lookup: Lookup; filter: PersonFilter; onFilter(f: PersonFilter): void; onThread(): void }) {
+export function PersonView({ person, stats, year, entries, lookup, filter, onFilter, onThread, locked = false }: { locked?: boolean; person: P; stats: ReturnType<typeof togetherStats>; year: number; entries: Entry[]; lookup: Lookup; filter: PersonFilter; onFilter(f: PersonFilter): void; onThread(): void }) {
   const bday = person.birthday ? nextBirthday(person.birthday, `${year}-01-01`) : null, max = Math.max(1, ...stats.byMonth), thread = { ['--pc' as string]: PERSON_THREADS[person.thread % PERSON_THREADS.length] };
-  const shown = [...entries].sort((a, b) => b.day.localeCompare(a.day) || b.at - a.at).filter(e => filter === 'all' || (filter === 'events' ? e.kind !== 'line' : feelingsOf(e.text, {}).length > 0));
+  const shown = [...entries].sort((a, b) => b.day.localeCompare(a.day) || b.at - a.at).filter(e => filter === 'all' || (filter === 'events' ? e.kind !== 'line' : !(locked && e.marks.priv) && feelingsOf(e.text, {}).length > 0));
   let lastMonth = '';
   return <div className="scr"><div className="content scroll">
     <header className="thead row2"><Back /><h1 className="tdate sm">{person.name}</h1></header>
@@ -40,7 +41,7 @@ export function PersonView({ person, stats, year, entries, lookup, filter, onFil
   </div><Tabs current="shelves" /></div>;
 }
 export function Person({ id }: { id: string }) {
-  const undo = useUndo(), [filter, setFilter] = useState<PersonFilter>('all'), year = new Date().getFullYear();
+  const undo = useUndo(), { locked } = usePrivacy(), [filter, setFilter] = useState<PersonFilter>('all'), year = new Date().getFullYear();
   const d = useLiveQuery(async () => {
     const person = (await db.people.get(id)) ?? (await db.people.toArray()).find(p => p.initial.toLowerCase() === id.toLowerCase());
     if (!person) return { person: null, entries: [] as Entry[], lookup: null };
@@ -50,6 +51,6 @@ export function Person({ id }: { id: string }) {
   if (!d.person || !d.lookup) return <div className="scr"><div className="content scroll"><header className="thead row2"><Back /><h1 className="tdate sm">Person</h1></header>
     <p className="entry">This person isn’t in Logbook. People come from your private starter file, in Settings.</p></div><Tabs current="shelves" /></div>;
   const person = d.person;
-  return <PersonView person={person} stats={togetherStats(person.initial, d.entries, year)} year={year} entries={d.entries} lookup={d.lookup} filter={filter} onFilter={setFilter}
+  return <PersonView person={person} stats={togetherStats(person.initial, d.entries, year)} year={year} entries={d.entries} lookup={d.lookup} filter={filter} onFilter={setFilter} locked={locked}
     onThread={() => { setPersonThread(db, person.id, (person.thread + 1) % PERSON_THREADS.length).catch(undo.fail); }} />;
 }

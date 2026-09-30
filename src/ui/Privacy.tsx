@@ -36,8 +36,9 @@ export function PrivacyProvider({ children }: { children: ReactNode }) {
   return <PrivacyContext.Provider value={value}>{children}</PrivacyContext.Provider>;
 }
 /* What a private entry shows while locked: that it exists, and a way to open it. */
-export function LockedEntry({ time }: { time?: string }) {
+const MARK_WORD = { first: 'First', gift: 'Gift', priv: 'Private', quiet: 'Don’t bring back' } as const;
+export function LockedEntry({ time, marks = {} }: { time?: string; marks?: Partial<Record<keyof typeof MARK_WORD, boolean>> }) {
   const { unlock } = usePrivacy();
   return <div className="ent locked"><div className="ent-top"><div className="ent-body"><p className="entry"><Icon name="lock" /> {PRIVATE_TEXT}</p></div>
-    <button type="button" className="btn sm" onClick={() => void unlock()}>Unlock</button></div>{time && <div className="ent-meta"><span>{time}</span></div>}</div>;
+    <button type="button" className="btn sm" onClick={() => void unlock()}>Unlock</button></div><div className="ent-meta">{time && <span>{time}</span>}{(Object.keys(MARK_WORD) as (keyof typeof MARK_WORD)[]).filter(k => marks[k]).map(k => <span key={k} className="mpill">{MARK_WORD[k]}</span>)}</div></div>;
 }

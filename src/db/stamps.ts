@@ -25,9 +25,10 @@ export async function ensureStamps(db: LogbookDb, day: string, now: Date, get: F
     if (!(await on())) return 'off';
     const row = await db.days.get(day), st: DayStamps = row?.stamps ?? {}, today = dayKey(now), final = day <= addDays(today, -2);
     if (day < '1940-01-01' || day > addDays(today, 14)) return 'none'; // no weather records reach this day
-    if (st.pending && st.tried && now.getTime() - st.tried < RETRY) return 'offline'; // it just failed: give it a moment
     const pos = await where(); if (!pos) return 'no-place';
-    const at = { lat: r2(pos.lat), lon: r2(pos.lon) }, here = (x?: { lat?: number; lon?: number }) => x?.lat === at.lat && x?.lon === at.lon;
+    const at = { lat: r2(pos.lat), lon: r2(pos.lon) }, tried = st.tried;
+    if (st.pending && tried && now.getTime() - tried.at < RETRY && tried.lat === at.lat && tried.lon === at.lon) return 'offline'; // it just failed here: give it a moment
+    const here = (x?: { lat?: number; lon?: number }) => x?.lat === at.lat && x?.lon === at.lon;
     const want = (x?: { final: boolean; at: number; lat?: number; lon?: number }) => !x || !here(x) || (!x.final && now.getTime() - x.at > STALE);
     const next: DayStamps = {}; let failed = false;
     const wu = want(st.weather) ? weatherUrl(day, pos.lat, pos.lon, today) : null;
@@ -40,7 +41,7 @@ export async function ensureStamps(db: LogbookDb, day: string, now: Date, get: F
     if (!failed && !st.pending && !next.weather && !next.air) return 'ok'; // nothing new: leave the day as it is
     await db.transaction('rw', db.days, async () => {
       const cur = (await db.days.get(day)) ?? { day }, stamps: DayStamps = { ...cur.stamps, ...next };
-      if (failed) { stamps.pending = true; stamps.tried = now.getTime(); } else { delete stamps.pending; delete stamps.tried; }
+      if (failed) { stamps.pending = true; stamps.tried = { at: now.getTime(), ...at }; } else { delete stamps.pending; delete stamps.tried; }
       await db.days.put({ ...cur, stamps });
     });
     return failed ? 'offline' : 'ok';

@@ -19,7 +19,7 @@ describe('the private lock', () => {
   it('asks for the phone’s own fingerprint or PIN, nothing else', async () => {
     let seen: CredentialCreationOptions | undefined;
     const r = await createLock({ create: async o => { seen = o; return cred([1, 2, 3]); }, get: async () => null }, 'localhost');
-    expect(r.credentialId).toBe('AQID'); expect(seen?.publicKey?.authenticatorSelection).toMatchObject({ authenticatorAttachment: 'platform', userVerification: 'required' });
+    expect(r!.credentialId).toBe('AQID'); expect(seen?.publicKey?.authenticatorSelection).toMatchObject({ authenticatorAttachment: 'platform', userVerification: 'required' });
     await expect(createLock({ create: async () => null, get: async () => null }, 'localhost')).rejects.toThrow('couldn’t use your fingerprint or PIN');
   });
   it('unlock: yes, a cancel, or a plain error', async () => {

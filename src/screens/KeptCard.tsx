@@ -40,7 +40,7 @@ export type KeptCardProps = Opens & { entry: Entry; lookup: Lookup; own: Record<
 /* One kept entry of any kind: its body, then its time and marks, and a ⋯ button to change or remove it. */
 export function KeptCard(p: KeptCardProps) {
   const { locked } = usePrivacy();
-  if (locked && p.entry.marks.priv) return <LockedEntry time={p.entry.data?.kind === 'past' ? undefined : timeLabelIn(p.entry.at, p.entry.tz)} />;
+  if (locked && p.entry.marks.priv) return <LockedEntry marks={p.entry.marks} time={p.entry.data?.kind === 'past' ? undefined : timeLabelIn(p.entry.at, p.entry.tz)} />;
   return <KeptCardOpen {...p} />;
 }
 function KeptCardOpen(p: KeptCardProps) {

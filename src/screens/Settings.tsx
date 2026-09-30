@@ -68,15 +68,15 @@ export function Settings() {
   const opened = async () => !privacy.locked || (await privacy.unlock()); // private text leaves the app only after the owner unlocks
   const today = dayKey(new Date());
   const act = (fn: () => Promise<unknown>) => async () => { setMessage(''); try { await fn(); } catch (e) { setMessage(e instanceof BackupError || e instanceof StarterError || (e as Error).name === 'PlainMessage' ? (e as Error).message : 'That didn’t work. Nothing was changed; try again.'); } };
-  const newLock = async () => { const { credentialId } = await createLock(navigator.credentials, location.hostname); await saveSettings(db, { lock: { credentialId, createdAt: Date.now() } }); };
+  const newLock = async () => { const made = await createLock(navigator.credentials, location.hostname, settings.lock?.userId); if (!made) return false; await saveSettings(db, { lock: { ...made, createdAt: Date.now() } }); return true; };
   return <SettingsView settings={settings} message={message} lockSupported={supported}
     onLock={on => void act(async () => {
-      if (on) { if (!(await lockSupport())) { setMessage('This phone’s browser can’t use your fingerprint or PIN here.'); return; } await newLock(); setMessage('Private entries are locked now.'); }
+      if (on) { if (!(await lockSupport())) { setMessage('This phone’s browser can’t use your fingerprint or PIN here.'); return; } if (await newLock()) setMessage('Private entries are locked now.'); }
       else {
         if (!(await lockSupport())) { if (!confirm('This phone can’t use a fingerprint or PIN here any more. Turn the lock off? Private entries will show as usual.')) return; }
         else if (privacy.locked && !(await privacy.unlock())) return;
         await saveSettings(db, { lock: undefined }); setMessage('The lock is off. Private entries show as usual.'); } })()}
-    onResetLock={() => void act(async () => { await newLock(); setMessage('The lock is set up again.'); })()}
+    onResetLock={() => void act(async () => { if (await newLock()) setMessage('The lock is set up again.'); })()}
     onVoice={voice => void saveSettings(db, { voice })} onDayStyle={dayStyle => void saveSettings(db, { dayStyle })} onTheme={theme => void saveSettings(db, { theme })} onMotion={motion => void saveSettings(db, { motion })}
     onExport={act(async () => { if (!(await opened())) return; if (!(await saveFile(await makeMarkdownZip(db), `logbook-export-${today}.zip`))) return; await saveSettings(db, { lastExport: Date.now() }); setMessage('Exported. The zip holds one Markdown file per day.'); })}
     onBackup={act(async () => { if (!(await opened())) return; await saveFile(await makeBackupZip(db), `logbook-backup-${today}.zip`); })}
