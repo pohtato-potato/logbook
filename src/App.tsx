@@ -16,6 +16,7 @@ import { Settings } from './screens/Settings';
 import { FirstRun } from './screens/FirstRun';
 import { AddSheetView } from './screens/AddSheet';
 import { Later } from './screens/Later';
+import { FormScreen } from './screens/forms/FormScreen';
 
 /* The Undo notice belongs to the screen it was shown on: moving to another screen clears it. */
 function ClearUndoOnMove({ at }: { at: string }) { const { moved } = useUndo(); useEffect(() => { moved(); }, [at, moved]); return null; }
@@ -38,7 +39,7 @@ export function App() {
     {r.name === 'day' && <DayPage day={r.day} />}
     {r.name === 'feel' && <FeelingPicker when={r.when} word={r.word} />}
     {r.name === 'add' && <AddSheetView />}
-    {r.name === 'form' && <Later title="Add" />}
+    {r.name === 'form' && <FormScreen key={r.kind} kind={r.kind} />}
     {r.name === 'shelves' && <Later title="Shelves" tab="shelves" />}
     {r.name === 'shelf' && <Later title="Shelf" tab="shelves" />}
     {r.name === 'person' && <Later title="Person" tab="shelves" />}
