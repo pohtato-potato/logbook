@@ -96,7 +96,7 @@ export function Almanac({ tab = 'report' }: { tab?: AlmTab }) {
     }
     body = <HeadlinesView today={today} value={line} suggestion={suggestion} onValue={setLine} weeks={weeks} months={monthLines(year, d.entries, d.moments, today)} year={year}
       onKeep={async () => { try { undo.show(await setHeadline(db, wk.end, line), 'Kept this week’s line.'); setLine(''); } catch (e) { undo.fail(e); } }} />;
-  } else if (tab === 'wrapped') body = <Wrapped month={today.slice(0, 7)} entries={d.entries} moments={d.moments} />;
+  } else if (tab === 'wrapped') body = <Wrapped month={today.slice(0, 7)} entries={d.entries} moments={d.moments} people={d.people} />;
   else {
     const quietDays = new Set(d.kept.filter(day => { const es = d.entries.filter(e => e.day === day); return es.length > 0 && es.every(e => e.marks.quiet || (locked && e.marks.priv)); }));
     const pickDay = randomDay(d.kept.filter(x => x !== today), () => seed, quietDays), fams = dayFamilies(d.moments, d.rows), then = onThisDay(d.entries.filter(e => !(locked && e.marks.priv)), today)[0], nowLine = lineOf(today);
