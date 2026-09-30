@@ -1,0 +1,14 @@
+node_modules
+dist
+dev-dist
+*.local
+.DS_Store
+# Personal data never belongs in this repo: backups, exports and the starter file stay on the phone.
+logbook-backup-*
+logbook-export-*
+logbook-starter*.json
+# The starter file and its generator hold names, homes and keys. Never publish them.
+private/
+.claude/
+.impeccable/
+.superpowers/

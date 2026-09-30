@@ -1,0 +1,60 @@
+<main class="wrap">
+  <header class="hero">
+    <h1>Logbook Pinboard 8</h1>
+    <p>The polish round. Everything from round 7 stays; these are the changes from your notes, plus a final pass over every screen.</p>
+    <ul class="changes">
+      <li><b>Normal text sizes again.</b> Main text is 16 pixels, as in most apps, and nothing is under 13. Tap targets stay big, and everything still follows your phone’s text-size setting.</li>
+      <li><b>The day page is Bloom, outlined, or Score.</b> Sky, the other Bloom and Poster are gone.</li>
+      <li><b>Health’s postcard has more in it,</b> and each day’s arrives the next afternoon, so late entries are covered. The four marks sit in a 2 × 2 grid.</li>
+      <li><b>Polish:</b> unused drawing code removed, the voice resets after the Almanac demo, and every screen checked again at 100%, 130% and 200%.</li>
+    </ul>
+    <p class="status" id="status" role="status">Connecting…</p>
+  </header>
+
+  <div class="bar" id="bar">
+    <div class="bar-in">
+      <div class="prog">
+        <span class="count" id="count">0 reacted</span>
+        <span class="meter" aria-hidden="true"><i id="meterfill"></i></span>
+        <button type="button" class="copy" id="copy">Copy my reactions</button>
+        <button type="button" class="viewbtn" id="viewbtn" aria-expanded="false" aria-controls="ctrls">View</button>
+      </div>
+      <div class="ctrls" id="ctrls">
+        <div class="seg" role="group" aria-label="Text size"><span class="seg-l">Text size</span>
+          <button type="button" data-set="tsize" data-val="1">100%</button><button type="button" data-set="tsize" data-val="1.3">130%</button><button type="button" data-set="tsize" data-val="2">200%</button></div>
+        <div class="seg" role="group" aria-label="Greyscale"><span class="seg-l">Greyscale</span>
+          <button type="button" data-set="grey" data-val="off">Off</button><button type="button" data-set="grey" data-val="on">On</button></div>
+        <div class="seg" role="group" aria-label="Palette"><span class="seg-l">Palette</span>
+          <button type="button" data-set="flav" data-val="luminous">Luminous</button><button type="button" data-set="flav" data-val="pigment">Pigment</button></div>
+        <div class="seg" role="group" aria-label="Background"><span class="seg-l">Background</span>
+          <button type="button" data-set="bg" data-val="light">Light</button><button type="button" data-set="bg" data-val="dark">Dark</button></div>
+        <div class="seg" role="group" aria-label="Motion"><span class="seg-l">Motion</span>
+          <button type="button" data-set="motion" data-val="still">Still</button><button type="button" data-set="motion" data-val="gentle">Gentle</button><button type="button" data-set="motion" data-val="lively">Lively</button></div>
+      </div>
+      <textarea class="copybox" id="copybox" hidden aria-label="Your reactions as text" readonly></textarea>
+    </div>
+  </div>
+
+  <section class="sec" id="s-try">
+    <div class="sec-h"><h2>Try it</h2><p class="sec-q">The working prototype. Tap “Show me” on a card to jump to it.</p></div>
+    <div class="proto-wrap">
+      <div class="proto-col"><div class="phone big" id="proto"><div id="proto-screen" class="scr-host"></div></div></div>
+      <div class="flows" id="flows"></div>
+    </div>
+    <div class="secnote"><label for="note-try">Anything about using it?</label>
+      <textarea id="note-try" data-secnote="try" placeholder="What felt natural, what felt clumsy, what’s missing"></textarea>
+      <span class="saved" data-saved="try"></span></div>
+  </section>
+
+  <div id="sections"></div>
+
+  <section class="end">
+    <h2>Anything else?</h2>
+    <p>What to take forward, what still needs work, and a new score out of 10.</p>
+    <div class="secnote">
+      <label for="note-overall">Overall notes</label>
+      <textarea id="note-overall" data-secnote="overall" placeholder="Direction, what to push further, your score"></textarea>
+      <span class="saved" data-saved="overall"></span>
+    </div>
+  </section>
+</main>

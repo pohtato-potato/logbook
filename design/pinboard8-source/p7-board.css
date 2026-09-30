@@ -1,0 +1,106 @@
+/* ---- the pinboard page around the phones, round 7 ---- */
+::selection{background:var(--ink); color:var(--bg)}
+.hero p{max-width:62em}
+.changes li{max-width:62em}
+.viewbtn{display:none; font:inherit; font-size:15px; font-weight:700; border-radius:999px; min-height:44px; padding:6px 14px; background:var(--panel); color:var(--ink); border:2px solid var(--rule); cursor:pointer}
+.seg button{min-height:44px}
+@media (max-width:620px){
+  .viewbtn{display:inline-block}
+  .bar .ctrls{display:none}
+  .bar.open .ctrls{display:flex; flex-wrap:wrap}
+  .copy{flex:1}
+}
+body.grey #proto, body.grey [data-demo]{filter:grayscale(1)}
+.fcell span{font-size:15px}
+.fcell b{font-size:17px}
+.fcell.fresh b::after{content:" (swapped)"; font-weight:400; color:var(--scr-muted); font-size:15px}
+.setnote{font-size:15px; color:var(--scr-muted); font-weight:700; text-align:center; padding:0 12px 12px}
+.stage{font-family:var(--body)}
+.branch{display:flex; flex-wrap:wrap; gap:20px; justify-content:center; align-items:flex-start}
+.branch figure{margin:0; display:grid; gap:8px; justify-items:center; width:min(100%, 340px)}
+.branch .phone{max-width:340px}
+.branch figcaption{font-size:15px; font-weight:700; color:var(--muted); text-align:center}
+.smallrow{display:grid; grid-template-columns:repeat(9, minmax(0, 1fr)); gap:6px; padding:14px 10px 6px}
+.scell{display:grid; justify-items:center; gap:4px; text-align:center}
+.scell canvas.sm1{width:40px; height:40px} .scell canvas.sm2{width:26px; height:26px}
+.scell b{font-size:14px}
+@media (max-width:620px){ .smallrow{grid-template-columns:repeat(3, minmax(0, 1fr))} }
+.croles{padding:6px 14px; display:grid; --u:16px; --f14:14px; --f15:15px; --f17:17px; --f20:20px; --f24:24px; --tap:44px}
+.crole{display:grid; grid-template-columns:minmax(0, 1fr) auto; gap:14px; align-items:center; padding:12px 0; border-top:1px solid var(--scr-rule)}
+.crole:first-child{border-top:0}
+.crole b{font-size:17px} .crole p{font-size:15px; color:var(--scr-muted); line-height:1.4; margin:2px 0 0}
+.crs{display:flex; flex-wrap:wrap; gap:8px; align-items:center; justify-content:flex-end; max-width:260px}
+.cr-f{display:inline-grid; justify-items:center; font-size:14px; font-weight:700} .cr-f canvas{width:52px; height:52px}
+@media (max-width:620px){ .crole{grid-template-columns:1fr} .crs{justify-content:flex-start} }
+.croles .face{width:44px; height:44px; border-radius:50%; display:grid; place-items:center; font-weight:700; font-size:17px; background:var(--scr-tag); color:var(--scr-ink); box-shadow:inset 0 0 0 3px var(--pc)}
+.croles .tagchip,.croles .mention{font-size:17px}
+.croles .rating{font-size:15px; font-weight:700; padding:2px 10px; border-radius:999px; border:1.5px solid var(--scr-line)}
+.croles .mpill{font-size:14px}
+.ctwrap{padding:12px 14px}
+.ct-h{font-size:15px; font-weight:700; margin:4px 0 6px}
+.ctgrid{display:grid; grid-template-columns:repeat(auto-fill, minmax(96px, 1fr)); gap:6px; margin-bottom:10px}
+.ct{display:grid; gap:2px; border-radius:12px; padding:8px 10px; font-size:15px} .ct b{font-size:15px} .ct i{font-style:normal; font-size:14px; font-weight:700}
+.hpwrap{display:grid; grid-template-columns:repeat(auto-fit, minmax(260px, 1fr)); gap:12px; padding:14px; --u:16px}
+/* the laptop reading room, drawn at 1240px and scaled to fit */
+.laptop-frame{position:relative; width:100%; max-width:100%; min-width:0; height:800px; overflow:hidden; border-radius:14px; border:1px solid var(--rule); background:var(--scr-base)}
+.laptop-inner{position:absolute; left:0; top:0; width:1240px; height:800px; transform-origin:0 0; display:grid; grid-template-columns:250px minmax(0, 1fr) 290px; gap:28px; padding:24px 26px; color:var(--scr-ink); font-family:var(--body); line-height:1.45; font-size:17px;
+  --u:16px; --f14:14px; --f15:15px; --f17:17px; --f20:20px; --f24:24px; --f30:30px; --tap:44px}
+.laptop-inner::before{content:""; position:absolute; inset:0 0 auto 0; height:300px; background:radial-gradient(80% 100% at 50% 0%, var(--dayglow), transparent 70%); pointer-events:none}
+.lp-col{display:grid; align-content:start; gap:12px; min-width:0; overflow:hidden; position:relative}
+.lp-brand{font-size:22px; font-weight:700}
+.lp-search{display:flex; align-items:center; gap:8px; min-height:44px; padding:0 12px; border-radius:14px; border:1.5px solid var(--scr-line); color:var(--scr-muted); font-size:15px}
+.lp-search svg,.laptop-inner svg{width:18px; height:18px; fill:none; stroke:currentColor; stroke-width:1.9; stroke-linecap:round}
+.lp-search kbd{margin-left:auto}
+kbd{font-family:var(--body); font-size:14px; font-weight:700; border:1.5px solid var(--scr-line); border-bottom-width:3px; border-radius:6px; padding:0 6px; color:var(--scr-ink)}
+.lp-nav{display:grid; gap:2px; font-size:17px}
+.lp-nav b,.lp-nav span{padding:8px 12px; border-radius:12px}
+.lp-nav b{background:var(--scr-tag)}
+.laptop-inner .lbl{font-size:15px; font-weight:700; margin:6px 0 0}
+.lp-cal{display:grid; grid-template-columns:repeat(7, 1fr); gap:3px}
+.lp-cal i{font-style:normal; font-size:14px; font-weight:700; text-align:center; color:var(--scr-muted)}
+.lp-cal span{position:relative; height:40px; border-radius:8px; display:grid; place-items:center; background:var(--scr-card); border:1px solid var(--scr-rule)}
+.lp-cal span:empty{background:none; border:0}
+.lp-cal span canvas{width:18px; height:18px; margin:12px 0 0 12px}
+.lp-cal span b{position:absolute; left:3px; top:-1px; font-size:14px; font-weight:700; color:var(--scr-muted)}
+.lp-cal span.future{opacity:.5} .lp-cal span.today{outline:2px solid var(--scr-ink)}
+.laptop-inner .spanline{font-size:15px}
+.lp-mid{gap:14px; max-width:720px; width:100%; justify-self:center}
+.lp-date{font-size:34px; font-weight:700; line-height:1.1}
+.laptop-inner .tstamp{font-size:15px; color:var(--scr-muted); font-weight:700}
+.laptop-inner .voice{font-size:18px; font-style:italic}
+.lp-write{border:1.5px solid var(--scr-line); border-radius:18px; background:var(--scr-card); padding:16px 18px; display:grid; gap:12px}
+.lp-text{font-size:20px; line-height:1.6; min-height:4.8em}
+.caret{display:inline-block; width:2px; height:1.1em; background:var(--scr-ink); vertical-align:-.15em; margin-left:2px}
+.lp-wbar{display:flex; justify-content:space-between; align-items:center; gap:10px}
+.lp-wbar .btn{display:inline-flex; align-items:center; min-height:44px; padding:6px 18px; border-radius:999px; background:var(--scr-ink); color:var(--scr-base); font-weight:700; font-size:17px}
+.laptop-inner .hint{font-size:15px; color:var(--scr-muted)}
+.lp-hero{margin:0; border-radius:16px; overflow:hidden}
+.lp-hero canvas{height:150px !important; width:100%; display:block}
+.laptop-inner .daylead{font-size:19px; font-style:italic; line-height:1.5}
+.lp-story{display:grid; gap:16px}
+.laptop-inner .st-item{display:grid; grid-template-columns:48px minmax(0, 1fr); gap:14px}
+.laptop-inner .st-item canvas{width:48px; height:48px; border-radius:50%; background:var(--scr-solid)}
+.laptop-inner .st-time{font-size:14px; font-weight:700; color:var(--scr-muted); margin:0}
+.laptop-inner .st-word{font-size:21px; font-weight:700; margin:0} .laptop-inner .st-word span{font-weight:400; font-size:18px}
+.laptop-inner .st-wx{font-size:15px; color:var(--scr-muted); margin:0}
+.laptop-inner .st-body{display:grid; gap:4px}
+.laptop-inner .entry{font-size:18px; line-height:1.55; margin:0}
+.laptop-inner .stamp{font-size:15px}
+.keys{display:grid; grid-template-columns:auto 1fr; gap:6px 10px; margin:0; font-size:15px; align-items:center}
+.keys dd{margin:0; color:var(--scr-muted)}
+.laptop-inner .faces{display:flex; gap:8px}
+.fmap{display:grid; gap:18px; overflow-x:auto}
+.fmgroup h3{font-size:19px; margin:4px 0 6px}
+.fmap table{width:100%; border-collapse:collapse; font-size:16px; min-width:520px}
+.fmap th,.fmap td{text-align:left; padding:8px; border-bottom:1px solid var(--rule); vertical-align:top}
+.fmap th{font-size:15px; color:var(--muted)}
+.st{display:inline-block; font-size:14px; font-weight:700; padding:2px 10px; border-radius:999px; white-space:nowrap}
+.st-new{background:var(--accent); color:var(--accent-ink)}
+.st-proto{background:var(--chip); color:var(--ink)}
+.st-drawn{border:1.5px dashed var(--muted)}
+.st-planned{border:1.5px solid var(--rule); color:var(--muted)}
+.st-later{color:var(--muted); border:1.5px dotted var(--muted)}
+[data-demo]{min-width:0}
+
+.lp-text mark{color:inherit; padding:0 2px}
+.lp-mid{-webkit-mask-image:linear-gradient(to bottom, #000 90%, transparent); mask-image:linear-gradient(to bottom, #000 90%, transparent)}

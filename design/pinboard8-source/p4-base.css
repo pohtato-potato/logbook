@@ -1,0 +1,106 @@
+/* Layout: round 7. A working prototype phone sits beside the list of flows to try; reworked visuals follow in a card grid. Everything in Atkinson Hyperlegible, legibility first. */
+:root{
+  --bg:#F2F5F6; --panel:#FFFFFF; --ink:#101820; --muted:#34424D; --rule:#BCC7CE; --accent:#0B57A4; --accent-ink:#FFFFFF; --chip:#E3EAEE; --focus:#C2410C;
+  --scr-base:#0F1317; --scr-ink:#EEF2F5; --scr-card:rgba(22,28,35,.68); --scr-solid:#182028; --scr-muted:rgba(238,242,245,.74); --scr-rule:rgba(238,242,245,.14); --scr-tag:rgba(238,242,245,.16);
+  --sp:1;
+  --body:"Atkinson Hyperlegible", Verdana, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0E1318; --panel:#172028; --ink:#F2F5F7; --muted:#C2CDD4; --rule:#3A4955; --accent:#8CC4FF; --accent-ink:#0B1520; --chip:#243240; --focus:#FDBA74;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0E1318; --panel:#172028; --ink:#F2F5F7; --muted:#C2CDD4; --rule:#3A4955; --accent:#8CC4FF; --accent-ink:#0B1520; --chip:#243240; --focus:#FDBA74;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+[hidden]{display:none !important}
+body{margin:0; background:var(--bg); color:var(--ink); font-family:var(--body); font-size:18px; line-height:1.6}
+a{color:var(--accent); text-underline-offset:3px}
+:focus-visible{outline:3px solid var(--focus); outline-offset:2px}
+h1,h2,h3{font-family:var(--body); font-weight:700; text-wrap:balance; margin:0; line-height:1.15}
+p{margin:0}
+button{font-family:inherit}
+.sr{position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap}
+
+.wrap{max-width:1200px; margin-inline:auto; padding-inline:clamp(16px, 4vw, 36px); padding-block:28px 80px}
+.hero{display:grid; gap:14px; padding-bottom:18px; max-width:64em}
+h1{font-size:clamp(38px, 7vw, 58px); letter-spacing:-.01em}
+.changes{margin:0; padding-left:1.2em; display:grid; gap:5px}
+.status{background:var(--chip); border-radius:10px; padding:12px 14px; font-weight:700}
+
+.bar{position:sticky; top:env(safe-area-inset-top, 0px); z-index:5; background:var(--bg); border-bottom:2px solid var(--rule); margin-inline:calc(-1 * clamp(16px, 4vw, 36px)); padding-inline:clamp(16px, 4vw, 36px); padding-block:8px}
+.bar-in{max-width:1200px; margin-inline:auto; display:grid; gap:8px}
+.prog{display:flex; flex-wrap:wrap; align-items:center; gap:8px 14px}
+.meter{flex:1 1 180px; height:12px; background:var(--chip); border-radius:6px; overflow:hidden; border:1px solid var(--rule)}
+.meter i{display:block; height:100%; width:0; background:var(--accent)}
+.count{font-weight:700; font-variant-numeric:tabular-nums}
+.ctrls{display:flex; gap:14px; overflow-x:auto; padding-bottom:2px; scrollbar-width:thin}
+.seg{display:inline-flex; align-items:center; gap:4px; flex:none}
+.seg-l{font-size:14px; font-weight:700; color:var(--muted); margin-right:2px}
+.seg button,.copy,.v,.notebtn,.showme{font:inherit; font-size:15px; font-weight:700; border-radius:999px; min-height:42px; padding:6px 13px; cursor:pointer; white-space:nowrap}
+.seg button{background:var(--panel); color:var(--ink); border:2px solid var(--rule)}
+.seg button[aria-pressed="true"]{background:var(--ink); color:var(--bg); border-color:var(--ink)}
+.copy{background:var(--accent); color:var(--accent-ink); border:2px solid var(--accent)}
+.copybox{width:100%; min-height:10em; font:inherit; font-size:15px; color:var(--ink); background:var(--panel); border:2px solid var(--rule); border-radius:10px; padding:10px}
+
+.sec{padding-top:36px; scroll-margin-top:180px}
+.sec-h{display:grid; gap:4px; margin-bottom:14px; max-width:62em}
+.sec-h h2{font-size:clamp(25px, 4.2vw, 33px)}
+.sec-q{color:var(--muted); font-weight:700}
+.cards{display:grid; grid-template-columns:repeat(auto-fill, minmax(320px, 1fr)); gap:16px}
+.card{background:var(--panel); border:2px solid var(--rule); border-radius:16px; padding:14px; display:grid; gap:10px; align-content:start; min-width:0}
+.card.wide{grid-column:1 / -1}
+.card[data-v="love"]{border-color:var(--accent)}
+.c-name{font-size:21px}
+.insp{font-size:15px; font-weight:700; color:var(--muted)}
+.row{display:flex; flex-wrap:wrap; gap:8px; align-items:center}
+.v{background:var(--panel); color:var(--ink); border:2px solid var(--rule)}
+.v:hover{border-color:var(--ink)}
+.v[aria-pressed="true"]{background:var(--ink); color:var(--bg); border-color:var(--ink)}
+.v[aria-pressed="true"]::after{content:" ✓"}
+.notebtn{background:transparent; color:var(--ink); border:2px dashed var(--rule)}
+.showme{background:var(--accent); color:var(--accent-ink); border:2px solid var(--accent)}
+.note,.secnote textarea{width:100%; min-height:4.2em; font:inherit; font-size:17px; color:var(--ink); background:var(--bg); border:2px solid var(--rule); border-radius:10px; padding:10px 12px; resize:vertical}
+.secnote{margin-top:14px; display:grid; gap:6px; max-width:62em}
+.secnote label{font-weight:700}
+.saved{font-size:14px; color:var(--muted); min-height:1.2em}
+.end{margin-top:40px; padding-top:24px; border-top:2px solid var(--rule); display:grid; gap:10px; max-width:62em}
+.end h2{font-size:30px}
+.steps{margin:0; padding-left:1.2em; display:grid; gap:4px; font-size:16px}
+
+/* ---- prototype layout ---- */
+.proto-wrap{display:grid; grid-template-columns:minmax(0, 400px) minmax(0, 1fr); gap:24px; align-items:start}
+.proto-col{position:sticky; top:130px}
+.flows{display:grid; gap:14px}
+@media (max-width:900px){ .proto-wrap{grid-template-columns:1fr} .proto-col{position:relative; top:0} }
+
+/* ---- stage ---- */
+.stage{background:var(--scr-base); color:var(--scr-ink); border-radius:14px; overflow:hidden; border:1px solid var(--rule); position:relative}
+.stage.open{overflow:visible}
+.stage canvas{display:block; width:100%}
+.h-legend{height:auto} .c-field{height:300px} .c-land{height:300px} .c-yr{height:320px} .c-pixels{height:360px} .c-ribbon{height:210px}
+.flegend{display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:4px; padding:10px}
+.fcell{display:grid; justify-items:center; align-content:start; text-align:center; padding:4px 2px 8px}
+.fcell canvas{width:110px; height:110px}
+.fcell b{font-size:15px}
+.fcell span{font-size:13.5px; color:var(--scr-muted); line-height:1.3}
+.blendwrap{position:relative; margin:0 12px}
+.blendwrap canvas{height:74px; border-radius:12px; cursor:pointer}
+.bl-lab{font-size:13px; font-weight:700; color:var(--scr-muted); margin:10px 12px 4px}
+.bl-scale{display:flex; justify-content:space-between; font-size:12px; font-weight:700; color:var(--scr-muted); margin:3px 12px 10px}
+.bl-tip{position:absolute; top:-6px; transform:translate(-50%, -100%); background:var(--scr-solid); color:var(--scr-ink); border:1px solid var(--scr-rule); border-radius:12px; padding:8px 10px; font-size:13px; line-height:1.35; width:190px; box-shadow:0 8px 20px rgba(0,0,0,.25); z-index:2}
+.bl-tip b{display:block; font-size:14px}
+
+body.still .anim{animation-play-state:paused}
+@media (max-width:620px){
+  body{font-size:17px}
+  .fcell canvas{width:74px; height:74px}
+  .meter{display:none}
+  .prog{justify-content:space-between; flex-wrap:nowrap}
+  .bar-in{gap:4px}
+  .copy,.seg button{min-height:38px; padding:4px 11px; font-size:14px}
+}
+@media (prefers-reduced-motion: reduce){ .anim{animation:none !important} }
