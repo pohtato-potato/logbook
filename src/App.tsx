@@ -20,6 +20,7 @@ import { Shelf, Shelves } from './screens/Shelves';
 import { Person } from './screens/Person';
 import { TagPage } from './screens/TagPage';
 import { Search } from './screens/Search';
+import { Almanac } from './screens/Almanac';
 import { PrivacyProvider } from './ui/Privacy';
 
 /* The Undo notice belongs to the screen it was shown on: moving to another screen clears it. */
@@ -49,6 +50,7 @@ export function App() {
     {r.name === 'person' && <Person id={r.id} />}
     {r.name === 'tag' && <TagPage tag={r.tag} />}
     {r.name === 'search' && <Search />}
+    {r.name === 'almanac' && <Almanac tab={r.tab} />}
     {r.name === 'settings' && <Settings />}
     {r.name === 'first-run' && <FirstRun />}
   </PrivacyProvider></UndoProvider></LookProvider></div>;

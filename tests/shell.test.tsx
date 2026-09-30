@@ -15,7 +15,7 @@ describe('routes', () => {
 describe('shared parts', () => {
   it('tabs name every destination and mark the current one', () => {
     const html = renderToStaticMarkup(<Tabs current="cal" />);
-    for (const w of ['Today', 'Calendar', 'Add', 'Settings']) expect(html).toContain(w);
+    for (const w of ['Today', 'Calendar', 'Add', 'Shelves', 'Almanac']) expect(html).toContain(w);
     expect(html).toMatch(/aria-current="page"[^>]*>[^]*Calendar/);
   });
   it('tags show # and their name; marks show their word', () => {

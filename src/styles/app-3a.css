@@ -1,0 +1,42 @@
+/* Stage 3a styles (Almanac, sharing in), ported from the approved phone styles by scripts/port-css-3a.py. */
+.echo{justify-self:start; background:transparent; border:1.5px dashed var(--line); color:var(--ink); border-radius:14px; padding:6px 12px; min-height:var(--tap); font:inherit; font-size:var(--f14); font-weight:700; cursor:pointer; text-align:left}
+.mast{border-top:3px solid var(--ink); border-bottom:1px solid var(--ink); padding:8px 0 6px; display:grid; gap:4px; flex:none}
+.mast-t{font-size:var(--f22); font-weight:700; letter-spacing:.1em; text-transform:uppercase; line-height:1.1}
+.mast-s{display:flex; justify-content:space-between; gap:6px; font-size:var(--f13); font-weight:700; color:var(--muted)}
+.headline{font-size:var(--f22); font-weight:700; line-height:1.15; flex:none; text-wrap:balance}
+.rep-hero{position:relative; flex:none}
+.rep-hero canvas{width:100%; height:290px; display:block}
+.notes{list-style:none; margin:-4px 0 0; padding:0; display:flex; flex-wrap:wrap; justify-content:center; gap:6px 14px; font-size:var(--f14); font-weight:700; flex:none}
+.notes li{display:inline-flex; align-items:center; gap:6px}
+.notes b{width:24px; height:24px; border-radius:50%; display:grid; place-items:center; background:var(--ink); color:var(--base); font-size:var(--f13)}
+.rep-row{display:grid; grid-template-columns:1fr 1fr; gap:8px; flex:none}
+.rep-cell{border-radius:18px; padding:12px; display:grid; gap:4px; align-content:start; border:1.5px solid var(--rule); background:var(--card)}
+.records{display:grid; gap:8px; flex:none}
+.rec{display:grid; grid-template-columns:64px 1fr; gap:10px; align-items:center; border-top:1px solid var(--rule); padding-top:8px}
+.rec .rn{text-align:right; font-size:var(--f22)}
+.rec p{font-size:var(--f16); line-height:1.35}
+.rep-fore{border-radius:18px; padding:12px 14px; border:2px dashed var(--line); display:grid; gap:6px; flex:none}
+.prompt{border-style:dashed; border-color:var(--line)}
+.hline{display:grid; grid-template-columns:auto minmax(0, 1fr); gap:10px; align-items:start; font-size:var(--f16); line-height:1.4; padding:5px 0}
+.hline canvas{width:28px; height:28px}
+.hline b{display:block; font-size:var(--f14)}
+.wrapped{display:flex; gap:10px; overflow-x:auto; scroll-snap-type:x mandatory; padding-bottom:4px; flex:none}
+.wcard{flex:0 0 82%; scroll-snap-align:start; aspect-ratio:9 / 13; border-radius:22px; padding:18px; display:grid; align-content:start; gap:8px; font-size:var(--f16)}
+.wcard canvas{width:110px; height:110px}
+.wk{font-size:var(--f14); font-weight:700; letter-spacing:.06em}
+.wbig2{font-size:var(--f22); font-weight:700; line-height:1.1}
+.wcard .rn.huge{font-size:calc(1rem * 4)}
+.rrow{display:grid; grid-template-columns:56px minmax(0, 1fr); gap:10px; align-items:center}
+.rrow canvas{width:56px; height:56px}
+.thennow{display:grid; grid-template-columns:1fr 1fr; gap:10px}
+.thennow div{display:grid; gap:4px}
+.thennow .photo{width:100%; height:auto; aspect-ratio:4 / 3}
+.sharesheet{bottom:12px; color:var(--ink)}
+.linkcard{display:grid; grid-template-columns:40px minmax(0, 1fr); gap:10px; align-items:center}
+.linkcard b{display:block; font-size:var(--f16)}
+.linkcard span{font-size:var(--f14); color:var(--muted)}
+.sharenote{background:var(--tag); border-radius:12px; padding:8px 10px}
+.rep-row{grid-template-columns:repeat(auto-fit, minmax(min(100%, 8em), 1fr))}
+.thennow{grid-template-columns:repeat(auto-fit, minmax(min(100%, 7em), 1fr))}
+.rec{grid-template-columns:auto minmax(0, 1fr)}
+.linkcard{grid-template-columns:auto minmax(0, 1fr)}

@@ -60,7 +60,7 @@ export function SettingsView(p: SettingsProps) {
         : <p className="hint">Homes come from your private starter file. They give each day its weather and the distance from home.</p>}</section>
     <section className="panel"><h2 className="lbl">Days</h2>
       <Row title="A day ends at 4 am" sub="Late nights count as the day before." /><Row title="Weeks start on Monday" sub="Calendars begin their weeks on Monday." /></section>
-  </div><Tabs current="settings" /></div>;
+  </div><Tabs current="" /></div>;
 }
 export function Settings() {
   const settings = useLiveQuery(() => getSettings(db), []) ?? DEFAULT_SETTINGS, [message, setMessage] = useState(''), privacy = usePrivacy(), [supported, setSupported] = useState<boolean | null>(null);
