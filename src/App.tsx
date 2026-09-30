@@ -15,11 +15,11 @@ import { FeelingPicker } from './screens/FeelingPicker';
 import { Settings } from './screens/Settings';
 import { FirstRun } from './screens/FirstRun';
 import { AddSheetView } from './screens/AddSheet';
-import { Later } from './screens/Later';
 import { FormScreen } from './screens/forms/FormScreen';
 import { Shelf, Shelves } from './screens/Shelves';
 import { Person } from './screens/Person';
 import { TagPage } from './screens/TagPage';
+import { Search } from './screens/Search';
 
 /* The Undo notice belongs to the screen it was shown on: moving to another screen clears it. */
 function ClearUndoOnMove({ at }: { at: string }) { const { moved } = useUndo(); useEffect(() => { moved(); }, [at, moved]); return null; }
@@ -47,7 +47,7 @@ export function App() {
     {r.name === 'shelf' && <Shelf shelf={r.shelf} />}
     {r.name === 'person' && <Person id={r.id} />}
     {r.name === 'tag' && <TagPage tag={r.tag} />}
-    {r.name === 'search' && <Later title="Search" />}
+    {r.name === 'search' && <Search />}
     {r.name === 'settings' && <Settings />}
     {r.name === 'first-run' && <FirstRun />}
   </UndoProvider></LookProvider></div>;
