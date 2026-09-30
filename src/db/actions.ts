@@ -72,10 +72,18 @@ export async function removeMoment(db: LogbookDb, momentId: number): Promise<Und
   const m = await db.moments.get(momentId); await guard(() => db.moments.delete(momentId));
   return once(`Removed ${m?.word ?? ''}`, async () => { if (m) await db.moments.put(m); });
 }
+/* Removing an entry takes back what it added: a place visit, or the span it made. Undo restores all of it. */
 export async function removeEntry(db: LogbookDb, entryId: number): Promise<Undo> {
   const e = await db.entries.get(entryId), ms = await db.moments.where('entryId').equals(entryId).toArray();
-  await guard(() => db.transaction('rw', db.entries, db.moments, async () => { await db.entries.delete(entryId); await db.moments.where('entryId').equals(entryId).delete(); }));
-  return once('Removed', () => db.transaction('rw', db.entries, db.moments, async () => { if (e) await db.entries.put(e); for (const m of ms) await db.moments.put(m); }));
+  const place = e?.data?.kind === 'place' ? await db.places.get(e.data.placeId) : undefined, span = e?.data?.kind === 'span' ? await db.spans.get(e.data.spanId) : undefined;
+  await guard(() => db.transaction('rw', [db.entries, db.moments, db.places, db.spans], async () => {
+    await db.entries.delete(entryId); await db.moments.where('entryId').equals(entryId).delete();
+    if (place) await db.places.update(place.id!, { visits: Math.max(0, place.visits - 1) });
+    if (span) await db.spans.delete(span.id!);
+  }));
+  return once('Removed', () => db.transaction('rw', [db.entries, db.moments, db.places, db.spans], async () => {
+    if (e) await db.entries.put(e); for (const m of ms) await db.moments.put(m); if (place) await db.places.put(place); if (span) await db.spans.put(span);
+  }));
 }
 export async function addOwnWord(db: LogbookDb, word: string, family: Family) { await guard(() => db.words.put({ word: word.trim().toLowerCase(), family, created: Date.now() })); }
 export async function getSettings(db: LogbookDb): Promise<Settings> { return (await db.settings.get('main')) ?? DEFAULT_SETTINGS; }
@@ -113,3 +121,25 @@ export async function setPhotoOfDay(db: LogbookDb, day: string, photoId: number 
   return once('Photo of the day', async () => { if (before) await db.days.put(before); else await db.days.delete(day); });
 }
 export async function setPersonThread(db: LogbookDb, id: string, thread: number) { await guard(() => db.people.update(id, { thread })); }
+/* A place and its visit in one write: a new place is created, a known one (same name) gains a visit and, if it had none, the position.
+   Undo puts the place back exactly as it was, or removes it if this keep created it. */
+export async function keepPlace(db: LogbookDb, p: { name: string; first: boolean; lat?: number; lon?: number; at: Date }) {
+  const name = p.name.trim(), t = p.at.getTime();
+  return guard(() => db.transaction('rw', db.entries, db.places, async () => {
+    const before = (await db.places.toArray()).find(x => x.name.toLowerCase() === name.toLowerCase());
+    let placeId: number;
+    if (before) { placeId = before.id!; await db.places.put({ ...before, visits: before.visits + 1, ...(before.lat == null && p.lat != null && p.lon != null ? { lat: p.lat, lon: p.lon } : {}) }); }
+    else placeId = await db.places.add({ name, first: p.first, visits: 1, ...(p.lat != null && p.lon != null ? { lat: p.lat, lon: p.lon } : {}) });
+    const entryId = await db.entries.add({ day: dayKey(p.at), at: t, tz: timeZone(), kind: 'place', text: '', marks: p.first ? { first: true } : {}, tags: [], people: [], writtenAt: Date.now(), data: { kind: 'place', placeId, first: p.first } });
+    return { entryId, undo: once('Kept', () => db.transaction('rw', db.entries, db.places, async () => { await db.entries.delete(entryId); if (before) await db.places.put(before); else await db.places.delete(placeId); })) };
+  }));
+}
+/* A span and the entry that marks it, in one write; Undo removes both. */
+export async function keepSpan(db: LogbookDb, s: Omit<Span, 'id'>, at: Date) {
+  if (s.to < s.from) throw new Error('The span ends before it starts.');
+  return guard(() => db.transaction('rw', db.entries, db.spans, async () => {
+    const spanId = await db.spans.add({ ...s, name: s.name.trim() });
+    const entryId = await db.entries.add({ day: dayKey(at), at: at.getTime(), tz: timeZone(), kind: 'span', text: '', marks: {}, tags: [], people: [], writtenAt: Date.now(), data: { kind: 'span', spanId } });
+    return { entryId, undo: once('Kept', () => db.transaction('rw', db.entries, db.spans, async () => { await db.entries.delete(entryId); await db.spans.delete(spanId); })) };
+  }));
+}

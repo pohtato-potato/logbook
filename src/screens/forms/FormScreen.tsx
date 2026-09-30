@@ -1,8 +1,8 @@
 import { useRef, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../../db/db';
-import { addPlace, addSpan, getSettings, keepEntry, type EntryDraft, type Undo } from '../../db/actions';
-import { addPhoto } from '../../db/photos';
+import { getSettings, keepEntry, keepPlace, keepSpan, type EntryDraft, type Undo } from '../../db/actions';
+import { addPhotos, keepKeepsake, photosMessage } from '../../db/photos';
 import { dayKey, parseDay, timeLabel } from '../../domain/day';
 import { roundCoord } from '../../domain/geo';
 import { go, type FormKind } from '../../router';
@@ -31,7 +31,7 @@ export function FormScreen({ kind }: { kind: FormKind }) {
   const [place, setPlace] = useForm<PlaceState>({ name: '', first: false });
   const [pos, setPos] = useState<{ lat: number; lon: number } | null>(null), [locating, setLocating] = useState(false), [placeErr, setPlaceErr] = useState('');
   const [person, setPerson] = useForm<PersonState>({ who: [], how: 'In person' });
-  const [keepsake, setKeepsake] = useForm<KeepState & { photoId?: number; thumb?: Blob }>({ name: '' });
+  const [keepsake, setKeepsake] = useForm<KeepState & { file?: File }>({ name: '' });
   const [span, setSpan] = useForm<SpanState>({ name: '', from: dayKey(now), to: dayKey(now), family: 'warm' });
   const [spanErr, setSpanErr] = useState('');
   const [past, setPast] = useForm<PastState>({ date: '', text: '' });
@@ -45,18 +45,17 @@ export function FormScreen({ kind }: { kind: FormKind }) {
       onLocate={() => { setLocating(true); setPlaceErr('');
         navigator.geolocation.getCurrentPosition(p => { setPos({ lat: roundCoord(p.coords.latitude), lon: roundCoord(p.coords.longitude) }); setLocating(false); },
           () => { setPlaceErr('Logbook couldn’t get your position. You can still keep the place.'); setLocating(false); }, { maximumAge: 60_000, timeout: 15_000 }); }}
-      onKeep={() => keep(async () => { const placeId = await addPlace(db, { name: place.name, first: place.first, ...(pos ?? {}) }); return entry({ kind: 'place', text: '', data: { kind: 'place', placeId, first: place.first }, marks: place.first ? { first: true } : {} })(); })} />;
+      onKeep={() => keep(async () => ({ undo: (await keepPlace(db, { name: place.name, first: place.first, ...(pos ?? {}), at: new Date() })).undo, message: 'Kept in today.' }))} />;
     case 'person': return <PersonFormView {...person} people={people} keepSub={sub} onChange={setPerson} onKeep={() => keep(entry({ kind: 'person', text: '', data: { kind: 'person', who: person.who, how: person.how } }))} />;
-    case 'keep': return <KeepFormView name={keepsake.name} thumb={keepsake.thumb} keepSub={sub} onChange={setKeepsake}
-      onPick={async f => { try { const r = await addPhoto(db, f, new Date()); setKeepsake({ photoId: r.photoId, thumb: (await db.photos.get(r.photoId))?.thumb }); } catch (e) { undo.fail(e); } }}
-      onKeep={() => keep(entry({ kind: 'keep', text: keepsake.name, data: { kind: 'keep', ...(keepsake.photoId != null ? { photoId: keepsake.photoId } : {}) } }))} />;
+    case 'keep': return <KeepFormView name={keepsake.name} thumb={keepsake.file} keepSub={sub} onChange={setKeepsake} onPick={file => setKeepsake({ file })}
+      onKeep={() => keep(async () => ({ undo: (await keepKeepsake(db, { name: keepsake.name, file: keepsake.file, at: new Date() })).undo, message: 'Kept in today.' }))} />;
     case 'span': return <SpanFormView {...span} error={spanErr} keepSub={sub} onChange={p => { setSpan(p); setSpanErr(''); }}
       onKeep={() => { if (span.to < span.from) { setSpanErr('The span ends before it starts.'); return; }
-        void keep(async () => { const spanId = await addSpan(db, span); const r = await keepEntry(db, { kind: 'span', text: '', data: { kind: 'span', spanId }, at: new Date() });
-          return { undo: { label: 'Kept', run: async () => { await r.undo.run(); await db.spans.delete(spanId); } }, message: `Kept ${span.name.trim()} on the calendar.` }; }); }} />;
+        void keep(async () => ({ undo: (await keepSpan(db, span, new Date())).undo, message: `Kept ${span.name.trim()} on the calendar.` })); }} />;
     case 'past': return <PastFormView {...past} today={dayKey(now)} keepSub={past.date ? `It goes on ${words(past.date)}` : 'Choose the date first'} onChange={setPast}
       onKeep={() => keep(entry({ kind: 'past', text: past.text, data: { kind: 'past' }, day: past.date }, `Kept on ${words(past.date)}, written later.`))} />;
-    case 'photo': return <PhotoFormView onPick={async files => { let n = 0; for (const f of files) { try { await addPhoto(db, f, new Date()); n++; } catch (e) { undo.fail(e); } } if (n === files.length) { go({ name: 'today' }); } }} />;
+    case 'photo': return <PhotoFormView onPick={async files => { try { const r = await addPhotos(db, files, new Date());
+      if (r.added) { undo.show(r.undo, photosMessage(r.added, r.failed), { carry: true }); go({ name: 'today' }); } else undo.fail(Object.assign(new Error(photosMessage(0, r.failed)), { name: 'NotAnImageError' })); } catch (e) { undo.fail(e); } }} />;
     case 'voice': return <VoiceForm />;
   }
 }

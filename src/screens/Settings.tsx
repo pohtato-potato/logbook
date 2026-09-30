@@ -4,7 +4,7 @@ import { db } from '../db/db';
 import { getSettings, saveSettings } from '../db/actions';
 import { DEFAULT_SETTINGS, type Settings as S } from '../db/types';
 import { makeMarkdownZip } from '../db/exportMarkdown';
-import { BackupError, makeBackup, restoreBackup } from '../db/backup';
+import { BackupError, makeBackupZip, restoreBackupFile } from '../db/backup';
 import { StarterError, applyStarter, parseStarter } from '../db/starter';
 import { dayKey } from '../domain/day';
 import { VOICES } from '../domain/voices';
@@ -36,7 +36,7 @@ export function SettingsView(p: SettingsProps) {
       <Row title="Export everything" sub={`Markdown files, one per day, in a zip that opens without Logbook.${s.lastExport ? ` Last on ${new Date(s.lastExport).toLocaleDateString('en-GB', { day: 'numeric', month: 'long' })}.` : ''}`}><button type="button" className="btn sm" onClick={p.onExport}>Export</button></Row>
       <Row title="Save a backup" sub="Everything in one file, for moving to a new phone."><button type="button" className="btn sm" onClick={p.onBackup}>Save</button></Row>
       <Row title="Restore a backup" sub="Replaces everything in Logbook with the backup."><button type="button" className="btn sm" onClick={() => restore.current?.click()}>Restore</button></Row>
-      <input ref={restore} type="file" accept="application/json,.json" hidden onChange={e => { const f = e.target.files?.[0]; if (f) p.onRestore(f); e.target.value = ''; }} />
+      <input ref={restore} type="file" accept="application/zip,.zip,application/json,.json" hidden onChange={e => { const f = e.target.files?.[0]; if (f) p.onRestore(f); e.target.value = ''; }} />
       <Row title="Your private starter file" sub={s.starterLoaded ? 'Loaded. Load it again after changing it.' : 'Names, homes and birthdays, kept only on this phone.'}><button type="button" className="btn sm" onClick={() => starter.current?.click()}>Load</button></Row>
       <input ref={starter} type="file" accept="application/json,.json" hidden onChange={e => { const f = e.target.files?.[0]; if (f) p.onStarter(f); e.target.value = ''; }} /></section>
     <section className="panel"><h2 className="lbl">Days</h2>
@@ -50,7 +50,7 @@ export function Settings() {
   return <SettingsView settings={settings} message={message}
     onVoice={voice => void saveSettings(db, { voice })} onDayStyle={dayStyle => void saveSettings(db, { dayStyle })} onTheme={theme => void saveSettings(db, { theme })} onMotion={motion => void saveSettings(db, { motion })}
     onExport={act(async () => { if (!(await saveFile(await makeMarkdownZip(db), `logbook-export-${today}.zip`))) return; await saveSettings(db, { lastExport: Date.now() }); setMessage('Exported. The zip holds one Markdown file per day.'); })}
-    onBackup={act(async () => { await saveFile(new Blob([JSON.stringify(await makeBackup(db))], { type: 'application/json' }), `logbook-backup-${today}.json`); })}
-    onRestore={f => void act(async () => { const text = await f.text(); if (!confirm('Replace everything in Logbook with this backup?')) return; await restoreBackup(db, text); setMessage('Restored from the backup.'); })()}
+    onBackup={act(async () => { await saveFile(await makeBackupZip(db), `logbook-backup-${today}.zip`); })}
+    onRestore={f => void act(async () => { if (!confirm('Replace everything in Logbook with this backup?')) return; await restoreBackupFile(db, f); setMessage('Restored from the backup.'); })()}
     onStarter={f => void act(async () => { await applyStarter(db, parseStarter(await f.text())); setMessage('Starter file loaded.'); })()} />;
 }

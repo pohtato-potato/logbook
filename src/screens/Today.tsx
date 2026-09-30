@@ -17,7 +17,7 @@ import { LineWriter } from './LineWriter';
 import { FeelingCard, type FeelingSource } from './FeelingCard';
 import { KeptCard } from './KeptCard';
 import { BlobImg } from '../ui/Blob';
-import { addPhoto, removePhoto } from '../db/photos';
+import { addPhotos, photosMessage, removePhoto } from '../db/photos';
 import { setPhotoOfDay } from '../db/actions';
 import { EMPTY_LOOKUP, type Lookup } from '../domain/entryText';
 import { loadLookup } from '../db/lookup';
@@ -83,7 +83,8 @@ export function Today() {
   const suggested = suggestedOverall(data.moments);
   return <>
     <TodayView now={now} greeting={VOICES[data.settings.voice % VOICES.length].greeting} night={isNight(now)} entries={data.entries} moments={data.moments} overall={data.row?.overall} suggested={suggested} grateful={data.row?.grateful} own={data.own} tagHistory={data.tagHistory} lookup={data.lookup} thumbs={new Map(data.photos.map(ph => [ph.id, ph.thumb]))} photos={data.photos} potd={data.row?.potd}
-      onPickPhotos={async files => { let added = 0; for (const f of files) { try { await addPhoto(db, f, new Date()); added++; } catch (e) { undo.fail(e); } } if (added && added === files.length) undo.clear(); }}
+      onPickPhotos={async files => { try { const r = await addPhotos(db, files, new Date());
+        if (r.added) undo.show(r.undo, photosMessage(r.added, r.failed)); else undo.fail(Object.assign(new Error(photosMessage(0, r.failed)), { name: 'NotAnImageError' })); } catch (e) { undo.fail(e); } }}
       onPotd={async id => { try { undo.show(await setPhotoOfDay(db, day, id), 'That’s the photo of the day now.'); } catch (e) { undo.fail(e); } }} onPhotoMenu={setPhotoMenu}
       foldedOpen={open} onToggleFold={() => setOpen(!open)} onConfirmOverall={async () => { if (suggested) try { undo.show(await confirmOverall(db, day, suggested), `The day overall is ${FAMILY_NAME[suggested.family].toLowerCase()}.`); } catch (e) { undo.fail(e); } }}
       onChangeOverall={() => go({ name: 'feel', when: 'day' })} onOpenFeeling={(word, src) => setCard({ word, src })} onEntryMenu={setMenu}

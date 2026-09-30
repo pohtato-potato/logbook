@@ -20,3 +20,21 @@ export function makeZip(files: { path: string; data: Uint8Array | string }[], wh
   end.setUint32(0, 0x06054b50, true); end.setUint16(8, files.length, true); end.setUint16(10, files.length, true); end.setUint32(12, size, true); end.setUint32(16, offset, true);
   return new Blob([...parts, ...central, new Uint8Array(end.buffer)] as BlobPart[], { type: 'application/zip' });
 }
+/* Reads a zip written by makeZip (stored entries): its files by path, as slices of the original Blob, so nothing big is copied. */
+export async function readZip(zip: Blob): Promise<Map<string, Blob>> {
+  const out = new Map<string, Blob>(), dec = new TextDecoder();
+  if (zip.size < 22) return out;
+  const tail = new DataView(await zip.slice(zip.size - 22).arrayBuffer());
+  if (tail.getUint32(0, true) !== 0x06054b50) return out;
+  const count = tail.getUint16(10, true), cdSize = tail.getUint32(12, true), cdAt = tail.getUint32(16, true);
+  const cd = new DataView(await zip.slice(cdAt, cdAt + cdSize).arrayBuffer());
+  for (let i = 0, o = 0; i < count; i++) {
+    if (cd.getUint32(o, true) !== 0x02014b50) break;
+    const size = cd.getUint32(o + 24, true), nameLen = cd.getUint16(o + 28, true), extra = cd.getUint16(o + 30, true), note = cd.getUint16(o + 32, true), local = cd.getUint32(o + 42, true);
+    const name = dec.decode(new Uint8Array(cd.buffer, o + 46, nameLen));
+    const lh = new DataView(await zip.slice(local, local + 30).arrayBuffer()), start = local + 30 + lh.getUint16(26, true) + lh.getUint16(28, true);
+    out.set(name, zip.slice(start, start + size));
+    o += 46 + nameLen + extra + note;
+  }
+  return out;
+}

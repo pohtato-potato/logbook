@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { db } from '../../db/db';
 import { keepEntry } from '../../db/actions';
 import { minSec } from '../../domain/entryText';
-import { pickMime, recorderSupport } from '../../domain/recorder';
+import { openRecorder, pickMime, recorderSupport } from '../../domain/recorder';
 import { go } from '../../router';
 import { Icon } from '../../ui/Icons';
 import { useUndo } from '../../ui/Undo';
@@ -30,14 +30,19 @@ export function VoiceForm() {
   useEffect(() => () => { if (rec.current?.state === 'recording') { rec.current.onstop = null; rec.current.stop(); } release(); }, []);
   const stop = () => { if (rec.current?.state === 'recording') rec.current.stop(); };
   const start = async () => {
-    try { stream.current = await navigator.mediaDevices.getUserMedia({ audio: true }); }
-    catch (e) { setState((e as Error).name === 'NotAllowedError' || (e as Error).name === 'SecurityError' ? 'denied' : 'unsupported'); return; }
-    const mime = pickMime(t => MediaRecorder.isTypeSupported(t)), chunks: Blob[] = [];
-    const r = new MediaRecorder(stream.current, mime ? { mimeType: mime } : undefined); rec.current = r;
-    r.ondataavailable = e => { if (e.data.size) chunks.push(e.data); };
-    r.onstop = () => { release(); setSeconds(Math.max(1, Math.round((Date.now() - started.current) / 1000))); setAudio(new Blob(chunks, { type: r.mimeType || mime || 'audio/webm' })); setState('recorded'); };
-    started.current = Date.now(); setSeconds(0); r.start(); setState('recording');
-    timer.current = window.setInterval(() => { const s = Math.round((Date.now() - started.current) / 1000); setSeconds(s); if (s >= MAX_SECONDS) stop(); }, 500);
+    if (busy.current || rec.current?.state === 'recording') return; busy.current = true;
+    try {
+      const mime = pickMime(t => MediaRecorder.isTypeSupported(t)), chunks: Blob[] = [];
+      const o = await openRecorder(() => navigator.mediaDevices.getUserMedia({ audio: true }), s => {
+        const r = new MediaRecorder(s, mime ? { mimeType: mime } : undefined);
+        r.ondataavailable = e => { if (e.data.size) chunks.push(e.data); };
+        r.onstop = () => { release(); setSeconds(Math.max(1, Math.round((Date.now() - started.current) / 1000))); setAudio(new Blob(chunks, { type: r.mimeType || mime || 'audio/webm' })); setState('recorded'); };
+        return r;
+      });
+      stream.current = o.stream; rec.current = o.rec; started.current = Date.now(); setSeconds(0); setState('recording');
+      timer.current = window.setInterval(() => { const s = Math.round((Date.now() - started.current) / 1000); setSeconds(s); if (s >= MAX_SECONDS) stop(); }, 500);
+    } catch (e) { setState((e as Error).message === 'denied' ? 'denied' : 'unsupported'); }
+    finally { busy.current = false; }
   };
   const keep = async () => {
     if (!audio || busy.current) return; busy.current = true;
