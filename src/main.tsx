@@ -5,6 +5,8 @@ import '@fontsource/atkinson-hyperlegible/700.css';
 import '@fontsource/atkinson-hyperlegible/400-italic.css';
 import '@fontsource-variable/archivo/wdth.css';
 import { App } from './App';
+import './styles/tokens.css';
+import './styles/app.css';
 
 // Ask the browser not to clear Logbook's storage under pressure. It's fine if it says no.
 if (navigator.storage && navigator.storage.persist) void navigator.storage.persist();
