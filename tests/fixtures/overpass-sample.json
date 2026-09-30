@@ -1,0 +1,1 @@
+{"elements": [{"type": "node", "lat": 10.0012, "lon": 20.0009, "tags": {"name": "Chai Point", "amenity": "cafe"}}, {"type": "way", "center": {"lat": 10.002, "lon": 20.003}, "tags": {"name": "Metro Station", "railway": "station"}}, {"type": "node", "lat": 10.0012, "lon": 20.0009, "tags": {"name": "Chai Point"}}, {"type": "node", "lat": 10.001, "lon": 20.001, "tags": {}}]}
