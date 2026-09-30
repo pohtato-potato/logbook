@@ -2,7 +2,7 @@ import { feelingOf, type Family } from '../vocab/vocab';
 import { dayKey, timeZone } from '../domain/day';
 import { feelingsOf, momentFromLine, peopleOf, removeFeelingToken, tagsOf, type MomentDraft } from '../domain/line';
 import type { LogbookDb } from './db';
-import { DEFAULT_SETTINGS, type Entry, type Marks, type Moment, type Settings } from './types';
+import { DEFAULT_SETTINGS, type Entry, type EntryData, type EntryKind, type Marks, type Moment, type Settings, type Span } from './types';
 
 export interface Undo { label: string; run: () => Promise<void> }
 export class StorageFullError extends Error { constructor() { super('The phone is out of space. Nothing was saved, and your words are still in the box.'); this.name = 'StorageFullError'; } }
@@ -80,3 +80,36 @@ export async function removeEntry(db: LogbookDb, entryId: number): Promise<Undo>
 export async function addOwnWord(db: LogbookDb, word: string, family: Family) { await guard(() => db.words.put({ word: word.trim().toLowerCase(), family, created: Date.now() })); }
 export async function getSettings(db: LogbookDb): Promise<Settings> { return (await db.settings.get('main')) ?? DEFAULT_SETTINGS; }
 export async function saveSettings(db: LogbookDb, patch: Partial<Settings>) { await db.settings.put({ ...(await getSettings(db)), ...patch, id: 'main' }); }
+
+/* Every kind other than a line. Something from before goes on its own date; writtenAt is always now. */
+export type EntryDraft = { kind: Exclude<EntryKind, 'line'>; text: string; data: EntryData; marks?: Marks; people?: string[]; at: Date; day?: string };
+export async function keepEntry(db: LogbookDb, d: EntryDraft) {
+  const t = d.at.getTime(), day = d.kind === 'past' && d.day ? d.day : dayKey(d.at);
+  const people = d.data.kind === 'person' ? [...d.data.who] : d.people ?? [];
+  const placeId = d.data.kind === 'place' ? d.data.placeId : null;
+  const bump = async (by: number) => { if (placeId == null) return; const p = await db.places.get(placeId); if (p) await db.places.update(placeId, { visits: Math.max(0, p.visits + by) }); };
+  return guard(() => db.transaction('rw', db.entries, db.places, async () => {
+    const entryId = await db.entries.add({ day, at: t, tz: timeZone(), kind: d.kind, text: d.text.trim(), marks: { ...(d.marks ?? {}) }, tags: tagsOf(d.text), people, writtenAt: Date.now(), data: d.data });
+    await bump(1);
+    return { entryId, undo: once('Kept', () => db.transaction('rw', db.entries, db.places, async () => { await db.entries.delete(entryId); await bump(-1); })) };
+  }));
+}
+/* The same name (ignoring case and spaces at the ends) is the same place. */
+export async function addPlace(db: LogbookDb, p: { name: string; lat?: number; lon?: number; first: boolean }): Promise<number> {
+  const name = p.name.trim(), same = (await db.places.toArray()).find(x => x.name.toLowerCase() === name.toLowerCase());
+  if (same) { if (p.lat != null && same.lat == null) await guard(() => db.places.update(same.id!, { lat: p.lat, lon: p.lon })); return same.id!; }
+  const row: { name: string; lat?: number; lon?: number; first: boolean; visits: number } = { name, first: p.first, visits: 0 };
+  if (p.lat != null && p.lon != null) { row.lat = p.lat; row.lon = p.lon; }
+  return guard(() => db.places.add(row));
+}
+export async function addSpan(db: LogbookDb, s: Omit<Span, 'id'>): Promise<number> {
+  if (s.to < s.from) throw new Error('The span ends before it starts.');
+  return guard(() => db.spans.add({ ...s, name: s.name.trim() }));
+}
+export async function setPhotoOfDay(db: LogbookDb, day: string, photoId: number | null): Promise<Undo> {
+  const before = await db.days.get(day), next = { ...(before ?? { day }) };
+  if (photoId == null) delete next.potd; else next.potd = photoId;
+  await guard(() => db.days.put(next));
+  return once('Photo of the day', async () => { if (before) await db.days.put(before); else await db.days.delete(day); });
+}
+export async function setPersonThread(db: LogbookDb, id: string, thread: number) { await guard(() => db.people.update(id, { thread })); }
