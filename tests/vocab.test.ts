@@ -34,3 +34,8 @@ describe('the vocabulary', () => {
     expect(ladderName('calm', 9)).toBe(ladderName('calm', 5));
   });
 });
+describe('search results', () => {
+  it('never lists the same word twice', () => {
+    for (const q of ['calm', 'tired', 'meh', 'saudade']) { const ws = searchFeelings(q, {}).map(m => m.w); expect(new Set(ws).size).toBe(ws.length); }
+  });
+});

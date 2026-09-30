@@ -52,7 +52,7 @@ export function searchFeelings(q: string, own: Record<string, Family>, limit = 8
   q = norm(q);
   if (!q) return [];
   const res: Match[] = [], seen = new Set<string>();
-  const add = (m: Match) => { const k = m.w + '|' + m.kind; if (!seen.has(k)) { seen.add(k); res.push(m); } };
+  const add = (m: Match) => { if (!seen.has(m.w)) { seen.add(m.w); res.push(m); } }; // each word once: the first (most specific) kind wins
   Object.entries(own).forEach(([w, family]) => { if (w.includes(q)) add({ w, family, note: 'your own word', kind: 'own' }); });
   ALL_WORDS.filter(x => x.w.includes(q)).sort((a, b) => a.w.indexOf(q) - b.w.indexOf(q) || a.w.length - b.w.length).forEach(x => add({ w: x.w, family: x.family, note: x.meaning, kind: 'atlas' }));
   Object.entries(D).filter(([k]) => k.includes(q) || k.replace(/ /g, '') === q.replace(/ /g, '')).forEach(([k, v]) => add({ w: k, family: v.family, note: 'means ' + slangTargets(k).join(', '), kind: 'slang' }));

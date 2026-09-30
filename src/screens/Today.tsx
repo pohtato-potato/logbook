@@ -47,7 +47,7 @@ export type TodayProps = { now: Date; greeting: string; night: boolean; entries:
 export function TodayView(p: TodayProps) {
   const own = p.own ?? {}, ov = p.overall ?? (p.suggested ? { ...p.suggested, set: false } : undefined), todayFamily = p.suggested?.family ?? 'calm';
   const header = <header className="thead onwall"><div className="hrow"><div className="hdate"><h1 className="tdate">{p.now.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })}</h1></div>
-    <div className="hbtns"><button type="button" className="iconbtn" aria-label="Settings" onClick={() => go({ name: 'settings' })}><Icon name="gear" /></button></div></div><p className="voice">{p.greeting}</p></header>;
+    <div className="hbtns"><button type="button" className="iconbtn" aria-label="Settings" onClick={() => go({ name: 'settings' })}><Icon name="sliders" /></button></div></div><p className="voice">{p.greeting}</p></header>;
   const kept = p.entries.length ? <section className="panel"><h2 className="lbl">Kept today</h2>{[...p.entries].sort((a, b) => b.at - a.at).map(e => <div className="ent" key={e.id}>
     <div className="ent-top"><div className="ent-body"><RichText text={e.text} own={own} tagHistory={p.tagHistory} todayFamily={todayFamily} onOpenFeeling={w => p.onOpenFeeling(w, { kind: 'entry', id: e.id! })} /></div>
       <button type="button" className="iconbtn sm" aria-label="Change or remove this entry" onClick={() => p.onEntryMenu(e.id!)}><Icon name="more" /></button></div>

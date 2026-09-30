@@ -1,5 +1,6 @@
 /* Icons from the approved design (design/pinboard8-source/p7-kit.js IC), one stroke style throughout. */
 const PATHS = {
+ "sliders": "<path d=\"M4 7h9M17 7h3M4 17h3M11 17h9\"/><circle cx=\"15\" cy=\"7\" r=\"2\"/><circle cx=\"9\" cy=\"17\" r=\"2\"/>",
  "today": "<circle cx=\"12\" cy=\"12\" r=\"4.5\"/><path d=\"M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5.3 5.3l1.6 1.6M17.1 17.1l1.6 1.6M5.3 18.7l1.6-1.6M17.1 6.9l1.6-1.6\"/>",
  "cal": "<rect x=\"3.5\" y=\"5\" width=\"17\" height=\"15\" rx=\"3\"/><path d=\"M3.5 10h17M8 3v4M16 3v4\"/>",
  "plus": "<path d=\"M12 5v14M5 12h14\"/>",
