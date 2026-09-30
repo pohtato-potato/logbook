@@ -38,7 +38,7 @@ export function App() {
   return <div id="app-root"><LookProvider value={lookOf(settings.theme)}><UndoProvider>
     <ClearUndoOnMove at={JSON.stringify(r)} />
     {r.name === 'today' && <Today />}
-    {r.name === 'cal' && <Calendar month={r.month} />}
+    {r.name === 'cal' && <Calendar month={r.month} tab={r.tab} />}
     {r.name === 'day' && <DayPage day={r.day} />}
     {r.name === 'feel' && <FeelingPicker when={r.when} word={r.word} />}
     {r.name === 'add' && <AddSheetView />}

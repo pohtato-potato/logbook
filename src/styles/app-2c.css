@@ -1,0 +1,34 @@
+/* Stage 2c styles (calendar tabs), ported from the approved phone styles by scripts/port-css-2c.py. */
+.gal{display:grid; grid-template-columns:repeat(7, minmax(0, 1fr)); gap:4px; flex:none}
+.gc2.blank{background:transparent; border-color:transparent; cursor:default}
+.gc2.future{opacity:.55; cursor:default}
+.gc2.today{outline:2.5px solid var(--ink); outline-offset:1px}
+.gc2{position:relative; aspect-ratio:1 / 1.12; border-radius:10px; background:var(--card); border:1px solid var(--rule); min-width:0; cursor:pointer; padding:0}
+.gc2 canvas{position:absolute; inset:0; width:100%; height:100%}
+.gd{position:absolute; left:3px; top:1px; font-size:var(--f13); font-weight:700; color:var(--ink)}
+.ycanvas{width:100%; height:calc(1rem * 21); max-height:400px; display:block; flex:none; border-radius:14px}
+.minical{display:grid; grid-template-columns:repeat(7, minmax(0, 1fr)); gap:3px}
+.minical span{min-height:30px; border-radius:8px; display:grid; place-items:center; font-size:var(--f13); font-weight:700; background:var(--tag); color:var(--muted)}
+.minical span.blank{background:transparent}
+.minical span.on{background:var(--ff, var(--fc)); color:var(--fo); box-shadow:inset 0 0 0 2px var(--ink)}
+.sel-box{display:grid; gap:8px; border-top:1px solid var(--rule); padding-top:10px}
+.emo-sum{font-size:var(--f16); line-height:1.45; flex:none; padding:0 2px}
+.emogrid{display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:6px}
+.emocell{--fc:var(--line); display:grid; justify-items:center; padding:4px 2px 8px; border-radius:14px; border:2px solid var(--rule); background:transparent; color:var(--ink); cursor:pointer; font:inherit}
+.emocell.on{border-color:var(--fc); background:color-mix(in srgb, var(--fc) 18%, transparent)}
+.emocell canvas{width:calc(1rem * 3.2); height:calc(1rem * 3.2)}
+.emocell b{font-size:var(--f14)}
+.emocell span{font-size:var(--f13); color:var(--muted); font-weight:700}
+canvas.clock{width:100%; height:270px; display:block}
+.often{display:flex; flex-wrap:wrap; align-items:center; gap:6px 8px; padding:6px 0; border-top:1px solid var(--rule)}
+.often:first-of-type{border-top:0}
+.of-with{font-size:var(--f14); color:var(--muted)}
+.of-f{display:inline-flex; gap:10px}
+.of-f span{display:inline-flex; align-items:center; gap:3px; font-size:var(--f14); font-weight:700}
+.of-f canvas{width:28px; height:28px}
+.life{display:grid; gap:14px; flex:none}
+.lifeitem{display:grid; grid-template-columns:auto 30px minmax(0, 1fr); gap:10px; align-items:start}
+.lifeitem b{font-family:"Archivo", var(--body); font-stretch:125%; font-weight:800; font-size:var(--f16)}
+.lifeitem canvas{width:30px; height:30px}
+.emogrid{grid-template-columns:repeat(auto-fit, minmax(min(100%, 5.6em), 1fr))}
+.gal{gap:2px; margin-inline:-6px}

@@ -1,5 +1,5 @@
 import { useLiveQuery } from 'dexie-react-hooks';
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { db } from '../db/db';
 import { addDays, dayKey, parseDay } from '../domain/day';
 import { FAMILY_NAME, type Family } from '../vocab/vocab';
@@ -9,14 +9,14 @@ import { Icon } from '../ui/Icons';
 import { Tabs } from '../ui/Tabs';
 import { Sheet } from '../ui/Sheet';
 import { useLook } from '../ui/Look';
-import { go } from '../router';
+import { CAL_TABS, go, type CalTab } from '../router';
 import { suggestedOverall } from './Today';
 import { useNow } from '../ui/useNow';
 import type { Span } from '../db/types';
 import { dateRange } from '../domain/entryText';
 
 /* A kept day: its main feeling (absent when only lines were kept), how many moments, and whether anything was marked a first. */
-type DayInfo = { family?: Family; count: number; first: boolean };
+type DayInfo = { family?: Family; count: number; first: boolean; photo?: boolean };
 const monthLabel = (month: string) => parseDay(month + '-01').toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
 const shift = (month: string, n: number) => { const d = parseDay(month + '-01'); d.setMonth(d.getMonth() + n); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`; };
 /* Blanks before the 1st so the grid starts on Monday, then every day of the month. */
@@ -31,7 +31,10 @@ function Glyph({ family, label }: { family: Family; label: string }) {
 }
 const dateWords = (d: string) => parseDay(d).toLocaleDateString('en-GB', { day: 'numeric', month: 'long' });
 /* The month: each kept day shows the form of its main feeling, so it reads without colour. */
-export function CalendarView({ month, today, days, spans = [], open, onOpen, onMonth }: { month: string; today: string; days: Record<string, DayInfo>; spans?: Span[]; open: string | null; onOpen(d: string | null): void; onMonth(m: string): void }) {
+const TAB_NAME: Record<CalTab, string> = { days: 'Days', gallery: 'Gallery', year: 'Year', life: 'Life', feelings: 'Feelings' };
+const count = (n: number, one: string, many = one + 's') => `${n} ${n === 1 ? one : many}`;
+/* The calendar: five ways to look back. Days is the month grid; the others arrive as children. */
+export function CalendarView({ month, today, days, spans = [], open, onOpen, onMonth, tab = 'days', children }: { month: string; today: string; days: Record<string, DayInfo>; spans?: Span[]; open: string | null; onOpen(d: string | null): void; onMonth(m: string): void; tab?: CalTab; children?: ReactNode }) {
   const { pal } = useLook(), spanOf = (d: string) => spans.find(s => s.from <= d && d <= s.to), band = (sp?: Span) => (sp ? { ['--sc' as string]: pal[sp.family] } : undefined);
   const grid = monthGrid(month), kept = Object.keys(days).filter(d => d.startsWith(month)).sort(), fams = [...new Set(kept.map(d => days[d].family).filter((f): f is Family => !!f))];
   const cell = (d: string | null, i: number) => {
@@ -46,14 +49,18 @@ export function CalendarView({ month, today, days, spans = [], open, onOpen, onM
   const i = open ? kept.indexOf(open) : -1, prev = i > 0 ? kept[i - 1] : null, next = i >= 0 && i < kept.length - 1 ? kept[i + 1] : null;
   const short = (d: string) => parseDay(d).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
   return <div className="scr"><div className="content scroll">
-    <header className="thead row2"><button type="button" className="iconbtn" aria-label="Previous month" onClick={() => onMonth(shift(month, -1))}><Icon name="back" /></button>
-      <h1 className="tdate sm">{monthLabel(month)}</h1><button type="button" className="iconbtn" aria-label="Next month" onClick={() => onMonth(shift(month, 1))}><Icon name="next" /></button></header>
-    <div className="ctabs" role="tablist" aria-label="Calendar views"><button type="button" role="tab" aria-selected="true" className="on">Days</button></div>
+    {tab === 'year' || tab === 'life' ? <header className="thead"><h1 className="tdate sm">{tab === 'life' ? 'Your life' : month.slice(0, 4)}</h1></header>
+      : <header className="thead row2"><button type="button" className="iconbtn" aria-label="Previous month" onClick={() => onMonth(shift(month, -1))}><Icon name="back" /></button>
+      <h1 className="tdate sm">{monthLabel(month)}</h1><button type="button" className="iconbtn" aria-label="Next month" onClick={() => onMonth(shift(month, 1))}><Icon name="next" /></button></header>}
+    <div className="ctabs" role="tablist" aria-label="Calendar views">{CAL_TABS.map(k => <button key={k} type="button" role="tab" aria-selected={k === tab} className={k === tab ? 'on' : ''} onClick={() => go({ name: 'cal', month, tab: k })}>{TAB_NAME[k]}</button>)}</div>
+    {tab !== 'days' ? children : <>
     <p className="hint">Each day shows the form of its main feeling. <Icon name="first" /> marks a first.</p>
     {fams.length > 0 && <div className="formkey">{fams.map(f => <span key={f}><Glyph family={f} label="" />{FAMILY_NAME[f]}</span>)}</div>}
     <div className="cal" role="group" aria-label={monthLabel(month)}>{['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((d, k) => <span key={'h' + k} className="mh" aria-hidden="true">{d}</span>)}{grid.map(cell)}</div>
     {spans.length > 0 && <section className="panel"><h2 className="lbl">Spans this month</h2>{spans.map(sp => <p key={sp.id} className="entry spanline"><i style={{ background: pal[sp.family] }} aria-hidden="true" />{sp.name}, {dateRange(sp.from, sp.to)}</p>)}<p className="hint">A band along the top of a day means it is part of a span.</p></section>}
-    {!kept.length && <p className="entry">Nothing kept this month yet.</p>}
+    {kept.length ? <section className="panel"><h2 className="lbl">{monthLabel(month).split(' ')[0]} so far</h2><p className="entry">{count(kept.length, 'day')} kept, {count(kept.reduce((a, d) => a + days[d].count, 0), 'moment')}, {count(kept.filter(d => days[d].first).length, 'first')}, {count(kept.filter(d => days[d].photo).length, 'day')} with photos.</p></section>
+      : <p className="entry">Nothing kept this month yet.</p>}
+    </>}
   </div>
   {open && days[open] && <Sheet label={dateWords(open)} onClose={() => onOpen(null)}>
     <div className="row3"><p className="tdate sm">{dateWords(open)}</p><button type="button" className="iconbtn" aria-label="Close" onClick={() => onOpen(null)}><Icon name="close" /></button></div>
@@ -64,22 +71,24 @@ export function CalendarView({ month, today, days, spans = [], open, onOpen, onM
   </Sheet>}
   <Tabs current="cal" /></div>;
 }
-export function Calendar({ month }: { month?: string }) {
+export function Calendar({ month, tab = 'days' }: { month?: string; tab?: CalTab }) {
   const today = dayKey(useNow()), m = month ?? today.slice(0, 7), [open, setOpen] = useState<string | null>(null);
   const { days, spans } = useLiveQuery(async () => {
     const first = m + '-01', last = m + '-31';
     const [moments, entries, rows] = await Promise.all([db.moments.where('day').between(first, last, true, true).toArray(), db.entries.where('day').between(first, last, true, true).toArray(), db.days.where('day').between(first, last, true, true).toArray()]);
     return { days: buildMonthDays(moments, entries, rows), spans: (await db.spans.toArray()).filter(sp => sp.from <= last && sp.to >= first).sort((a, b) => a.from.localeCompare(b.from)) };
   }, [m]) ?? { days: {}, spans: [] };
-  return <CalendarView month={m} today={today} days={days} spans={spans} open={open} onOpen={setOpen} onMonth={mm => go({ name: 'cal', month: mm })} />;
+  return <CalendarView month={m} today={today} days={days} spans={spans} open={open} onOpen={setOpen} onMonth={mm => go({ name: 'cal', month: mm, tab })} tab={tab}>
+    <p className="entry">Coming in this stage.</p></CalendarView>;
 }
 
 /* Every day with anything kept: moments, a set day overall, or just lines. */
-export function buildMonthDays(moments: { day: string; family: Family; at: number; word: string; strength: number }[], entries: { day: string; marks: { first?: boolean } }[], rows: { day: string; overall?: { family: Family } }[]): Record<string, DayInfo> {
+export function buildMonthDays(moments: { day: string; family: Family; at: number; word: string; strength: number }[], entries: { day: string; marks: { first?: boolean } }[], rows: { day: string; overall?: { family: Family }; potd?: number }[]): Record<string, DayInfo> {
   const out: Record<string, DayInfo> = {};
-  for (const d of new Set([...moments.map(x => x.day), ...entries.map(e => e.day), ...rows.filter(r => r.overall).map(r => r.day)])) {
+  for (const d of new Set([...moments.map(x => x.day), ...entries.map(e => e.day), ...rows.filter(r => r.overall || r.potd != null).map(r => r.day)])) {
     const ms = moments.filter(x => x.day === d), fam = rows.find(r => r.day === d)?.overall?.family ?? suggestedOverall(ms)?.family;
     const info: DayInfo = { count: ms.length, first: entries.some(e => e.day === d && !!e.marks.first) };
+    if (rows.some(r => r.day === d && r.potd != null)) info.photo = true;
     if (fam) info.family = fam;
     out[d] = info;
   }
