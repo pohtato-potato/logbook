@@ -16,7 +16,7 @@ export async function placesOn(db: LogbookDb, day: string) {
   return (await db.places.bulkGet(ids)).flatMap(p => (p?.lat != null && p.lon != null ? [{ lat: p.lat, lon: p.lon }] : []));
 }
 /* Fills a day's weather and air when they are missing or stale. Never blocks, never throws; what it could not get waits for next time. */
-export async function ensureStamps(db: LogbookDb, day: string, now: Date, fetch: FetchJson): Promise<'ok' | 'off' | 'no-place' | 'offline'> {
+export async function ensureStamps(db: LogbookDb, day: string, now: Date, get: FetchJson): Promise<'ok' | 'off' | 'no-place' | 'offline'> {
   try {
     const settings = await getSettings(db); if (!sourcesOf(settings).weather) return 'off';
     const row = await db.days.get(day), st: DayStamps = row?.stamps ?? {}, today = dayKey(now), final = day <= addDays(today, -2);
@@ -24,9 +24,9 @@ export async function ensureStamps(db: LogbookDb, day: string, now: Date, fetch:
     const want = (x?: { final: boolean; at: number }) => !x || (!x.final && now.getTime() - x.at > STALE);
     const next: DayStamps = {}; let failed = false;
     const wu = want(st.weather) ? weatherUrl(day, pos.lat, pos.lon, today) : null;
-    if (wu) { try { const w = parseWeather(await fetch(wu)); if (w) next.weather = { ...w, final, at: now.getTime() }; else failed = true; } catch { failed = true; } }
+    if (wu) { try { const w = parseWeather(await get(wu)); if (w) next.weather = { ...w, final, at: now.getTime() }; else failed = true; } catch { failed = true; } }
     const au = want(st.air) ? airUrl(day, pos.lat, pos.lon, today) : null;
-    if (au) { try { const h = parseAir(await fetch(au)), a = h && indianAqi(h); if (a) next.air = { ...a, final, at: now.getTime() }; else if (!h) failed = true; } catch { failed = true; } }
+    if (au) { try { const h = parseAir(await get(au)), a = h && indianAqi(h); if (a) next.air = { ...a, final, at: now.getTime() }; else if (!h) failed = true; } catch { failed = true; } }
     if (!sourcesOf(await getSettings(db)).weather) return 'off'; // switched off while we were asking: drop the answer
     await db.transaction('rw', db.days, async () => {
       const cur = (await db.days.get(day)) ?? { day }, stamps: DayStamps = { ...cur.stamps, ...next };
