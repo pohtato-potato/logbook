@@ -23,4 +23,13 @@ describe('first run', () => {
     expect(s2).toContain('Later');
     expect(renderToStaticMarkup(<FirstRunView step={3} message="" onBegin={noop} onStarter={noop} onSkip={noop} onDone={noop} />)).toContain('Tonight’s first line');
   });
+  it('outside sources can be switched off, say what they send, and homes are listed', () => {
+    const props = { message: '', onVoice: noop, onDayStyle: noop, onTheme: noop, onMotion: noop, onExport: noop, onBackup: noop, onRestore: noop, onStarter: noop, onSource: noop };
+    const off = renderToStaticMarkup(<SettingsView {...props} settings={{ ...DEFAULT_SETTINGS, sources: { weather: false, places: true } }} />);
+    expect(off).toMatch(/role="switch" aria-checked="false"[^>]*>Off/); expect(off).toMatch(/role="switch" aria-checked="true"[^>]*>On/);
+    expect(off).toContain('about 1 km'); expect(off).toContain('Homes come from your private starter file');
+    const homes = renderToStaticMarkup(<SettingsView {...props} settings={{ ...DEFAULT_SETTINGS, homes: [{ name: 'Home 1', lat: 1, lon: 2, from: '2019-01-01', to: '2025-06-30' }, { name: 'Home 2', lat: 1, lon: 2, from: '2025-07-01' }] }} />);
+    expect(homes).toContain('Since July 2025, now'); expect(homes).toContain('January 2019 to June 2025');
+  });
 });
+
