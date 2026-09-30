@@ -143,3 +143,10 @@ export async function keepSpan(db: LogbookDb, s: Omit<Span, 'id'>, at: Date) {
     return { entryId, undo: once('Kept', () => db.transaction('rw', db.entries, db.spans, async () => { await db.entries.delete(entryId); await db.spans.delete(spanId); })) };
   }));
 }
+/* This week in a line, kept on the week's Sunday. An empty line removes it. */
+export async function setHeadline(db: LogbookDb, sunday: string, text: string): Promise<Undo> {
+  const before = await db.days.get(sunday), next = { ...(before ?? { day: sunday }) }, line = text.trim();
+  if (line) next.headline = line; else delete next.headline;
+  await guard(() => db.days.put(next));
+  return once('This week in a line', async () => { if (before) await db.days.put(before); else await db.days.delete(sunday); });
+}
