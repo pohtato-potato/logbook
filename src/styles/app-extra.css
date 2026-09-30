@@ -17,3 +17,5 @@ html[data-big-text] .fgrid{grid-template-columns:repeat(2, minmax(0, 1fr))}
 body:has(.pinbar) .toast{bottom:calc(1rem * 9)}
 /* Words for screen readers only (e.g. a person's name beside their initial). */
 .sr-only{position:absolute; width:1px; height:1px; margin:-1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap}
+.ph .phimg{position:absolute; inset:0; width:100%; height:100%; object-fit:cover; border-radius:inherit}
+.ph b{position:relative}
