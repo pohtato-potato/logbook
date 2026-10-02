@@ -1,0 +1,14 @@
+{
+  "id": "health:2026-09-28",
+  "app": "health",
+  "version": 1,
+  "day": "2026-09-28",
+  "writtenAt": 1790670000000,
+  "steps": 7420,
+  "sleepMin": 410,
+  "workout": { "name": "Upper body", "minutes": 38 },
+  "checkin": { "at": 1790649000000 },
+  "walk": { "km": 412.3, "place": "Jaipur", "next": "Ajmer" },
+  "rings": { "workout": 1, "sleep": 0.86, "steps": 0.74 },
+  "line": "An easy walking day. The knees filed no complaints."
+}
