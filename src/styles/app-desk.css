@@ -1,15 +1,15 @@
-/* The laptop reading room (1024 px and wider), after the approved laptop board (p7-board.css), in rem so it follows the text size. */
-.desk{display:grid; grid-template-columns:minmax(14rem, 16rem) minmax(0, 1fr) minmax(16rem, 18rem); gap:2rem; padding:1.5rem 2rem; max-width:88rem; margin:0 auto; min-height:100vh; align-items:start}
+/* The laptop reading room (68em, about 1088 px, and wider, so the calendar's 44 px days and the reading column both fit), after the approved laptop board (p7-board.css), in rem so it follows the text size. */
+.desk{display:grid; grid-template-columns:minmax(21rem, 22rem) minmax(0, 1fr) minmax(16rem, 18rem); gap:2rem; padding:1.5rem 2rem; max-width:88rem; margin:0 auto; min-height:100vh; align-items:start}
 .lp-col{display:grid; align-content:start; gap:.75rem; min-width:0}
 .lp-left,.lp-right{position:sticky; top:1.5rem; max-height:calc(100vh - 3rem); overflow:auto}
-.lp-brand{font-family:"Archivo", var(--body); font-stretch:125%; font-weight:800; font-size:var(--f22); margin:0}
+.lp-brand{font-family:var(--num); font-stretch:125%; font-weight:800; font-size:var(--f22); margin:0}
 .lp-search{display:flex; align-items:center; gap:.5rem; min-height:var(--tap); padding:0 .75rem; border-radius:14px; border:1.5px solid var(--line); background:none; color:var(--muted); font:inherit; text-align:left; cursor:pointer}
 .lp-search svg{width:1.1rem; height:1.1rem} .lp-search kbd{margin-left:auto}
 kbd{font-family:var(--body); font-size:var(--f13); font-weight:700; border:1.5px solid var(--line); border-bottom-width:3px; border-radius:6px; padding:0 .4rem; color:var(--ink)}
 .lp-nav{display:grid; gap:2px}
 .lp-nav button{min-height:var(--tap); padding:.4rem .75rem; border-radius:12px; border:0; background:none; color:var(--ink); font:inherit; font-size:var(--f16); text-align:left; cursor:pointer}
 .lp-nav button.on{background:var(--tag); font-weight:700}
-.lp-cal{display:grid; grid-template-columns:repeat(7, minmax(0, 1fr)); gap:3px}
+.lp-cal{display:grid; grid-template-columns:repeat(7, minmax(2.75rem, 1fr)); gap:3px}
 .lp-cal i{font-style:normal; font-size:var(--f13); font-weight:700; text-align:center; color:var(--muted)}
 .lp-cal button{position:relative; min-height:2.75rem; border-radius:8px; background:var(--card); border:1px solid var(--rule); padding:0; cursor:pointer; color:var(--ink)}
 .lp-cal button b{position:absolute; left:3px; top:1px; font-size:var(--f13); color:var(--muted)}
@@ -23,4 +23,4 @@ kbd{font-family:var(--body); font-size:var(--f13); font-weight:700; border:1.5px
 .lp-right .stamps{grid-template-columns:1fr}
 .keys{display:grid; grid-template-columns:auto 1fr; gap:.4rem .75rem; margin:0; align-items:center} .keys dd{margin:0; color:var(--muted)}
 .lp-mid .stamppanel{display:none}
-@media (max-width: 1199px){ .desk{grid-template-columns:minmax(12rem, 13rem) minmax(0, 1fr) minmax(13rem, 14rem); gap:1.25rem; padding:1.25rem} }
+@media (max-width: 1199px){ .desk{grid-template-columns:21rem minmax(0, 1fr) minmax(13rem, 14rem); gap:1.25rem; padding:1.25rem} }

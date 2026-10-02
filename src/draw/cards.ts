@@ -18,7 +18,9 @@ export function wrappedCards(month: string, entries: Entry[], moments: Moment[],
   if (fams.length) {
     const f = fams[0], days = ms.filter(m => m.family === f).map(m => m.day), tag = [...count(es.filter(e => days.includes(e.day)).flatMap(e => e.tags))].sort((a, b) => b[1] - a[1])[0]?.[0];
     const mid = [...days].sort()[Math.floor(days.length / 2)], part = +mid.slice(8) <= 10 ? 'early in the month' : +mid.slice(8) <= 20 ? 'mid-month' : 'late in the month';
-    out.push({ kind: 'mostly', title: `Your ${monthName}`, big: `Mostly ${lower(f)}`, line: `${n.get(f)} ${lower(f)} ${n.get(f) === 1 ? 'moment' : 'moments'}, most of them ${tag ? `on #${tag} days` : part}.`, families: pair(f) });
+    const k = n.get(f)!, fDays = new Set(days).size, tagged = tag ? new Set(es.filter(e => days.includes(e.day) && e.tags.includes(tag)).map(e => e.day)).size : 0;
+    const where = k < 3 ? part : tag && tagged * 2 > fDays ? `on #${tag} days` : part; // said only when it is true of most of them
+    out.push({ kind: 'mostly', title: `Your ${monthName}`, big: `Mostly ${lower(f)}`, line: k === 1 ? `1 ${lower(f)} moment, ${part}.` : `${k} ${lower(f)} moments, ${k < 3 ? 'both' : 'most of them'} ${where}.`, families: pair(f) });
   }
   const firsts = es.filter(e => e.marks.first);
   if (firsts.length) {
@@ -49,12 +51,14 @@ export function drawCard(ctx: CanvasRenderingContext2D, look: Look, w: number, h
   const pad = w * 0.08, s = w / 1080; ctx.fillStyle = c.text; ctx.textAlign = 'left'; ctx.textBaseline = 'top';
   ctx.font = `700 ${Math.round(44 * s)}px 'Atkinson Hyperlegible', sans-serif`; ctx.fillText(card.title.toUpperCase(), pad, pad);
   drawForm(ctx, look, card.families[0], w - pad - 90 * s, pad + 90 * s, 80 * s, 0);
-  ctx.fillStyle = c.text; ctx.font = `800 ${Math.round((card.big.length > 12 ? 96 : 150) * s)}px 'Archivo', 'Atkinson Hyperlegible', sans-serif`;
+  ctx.fillStyle = c.text; ctx.font = `800 ${Math.round((card.big.length > 12 ? 96 : 150) * s)}px 'Archivo Variable', 'Atkinson Hyperlegible', sans-serif`;
   const y = wrap(ctx, card.big, pad, h * 0.34, w - 2 * pad, (card.big.length > 12 ? 110 : 165) * s);
   ctx.font = `400 ${Math.round(52 * s)}px 'Atkinson Hyperlegible', sans-serif`; wrap(ctx, card.line, pad, y + 30 * s, w - 2 * pad, 70 * s);
   ctx.font = `700 ${Math.round(34 * s)}px 'Atkinson Hyperlegible', sans-serif`; ctx.fillText('Logbook', pad, h - pad - 34 * s);
 }
+/* Drawn off screen where the browser can; otherwise on an ordinary canvas that is never shown. */
 export async function cardPng(card: Card, look: Look): Promise<Blob> {
-  const c = new OffscreenCanvas(1080, 1350); drawCard(c.getContext('2d') as unknown as CanvasRenderingContext2D, look, 1080, 1350, card);
-  return c.convertToBlob({ type: 'image/png' });
+  if (typeof OffscreenCanvas !== 'undefined') { const c = new OffscreenCanvas(1080, 1350); drawCard(c.getContext('2d') as unknown as CanvasRenderingContext2D, look, 1080, 1350, card); return c.convertToBlob({ type: 'image/png' }); }
+  const c = document.createElement('canvas'); c.width = 1080; c.height = 1350; drawCard(c.getContext('2d')!, look, 1080, 1350, card);
+  return new Promise((ok, no) => c.toBlob(b => (b ? ok(b) : no(new Error('The picture couldn’t be made.'))), 'image/png'));
 }

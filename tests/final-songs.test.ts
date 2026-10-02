@@ -46,3 +46,42 @@ describe('I8, I12: backups keep songs; a full phone says so', () => {
     await expect(applyStarter(db, { format: 'logbook-starter', version: 1, people: [], homes: [] } as never)).rejects.toBeInstanceOf(StorageFullError);
   });
 });
+
+import { dayToMarkdown } from '../src/domain/markdown';
+import { songsMarkdown } from '../src/db/exportMarkdown';
+import card from './fixtures/postcard-v1.json';
+import type { Postcard } from '../src/sources/shelf';
+describe('I7, M20: the Markdown archive keeps everything', () => {
+  it('a day keeps its song, the week’s headline and Health’s postcard', () => {
+    const md = dayToMarkdown('2026-09-27', { day: '2026-09-27', headline: 'A week of rain', stamps: { song: { artist: 'A.R. Rahman', track: 'Kun Faya Kun', plays: 4, final: true, at: 0 } } }, [], [], undefined, undefined, card as Postcard);
+    expect(md).toContain('song: "Kun Faya Kun, A.R. Rahman (4 plays)"'); expect(md).toContain('headline: "A week of rain"');
+    expect(md).toContain('## Postcard from Health'); expect(md).toContain((card as Postcard).line);
+  });
+  it('songs of the week get their own file, newest first', () => {
+    expect(songsMarkdown([{ week: '2025-01-06', artist: 'A', track: 'T', plays: 3 }, { week: '2025-01-13', artist: '', track: '', plays: 0 }])).toBe('# Songs of the week\n\n- Week of 13 January 2025: nothing played\n- Week of 6 January 2025: T, A (3 plays)\n');
+  });
+  it('a link whose address has brackets stays one link', () => {
+    const md = dayToMarkdown('2026-09-27', undefined, [{ id: 1, day: '2026-09-27', at: 0, tz: 'UTC', kind: 'link', text: '', marks: {}, tags: [], people: [], writtenAt: 0, data: { kind: 'link', url: 'https://en.wikipedia.org/wiki/Up_(film)', title: 'Up' } }], []);
+    expect(md).toContain('[Up](<https://en.wikipedia.org/wiki/Up_(film)>)');
+  });
+});
+
+import { readShare, shareToEntry } from '../src/share';
+describe('I14, I15, M8: sharing in keeps every word', () => {
+  const yt = { title: '', text: 'Lofi beats to study to', url: 'https://youtu.be/abc' };
+  it('a link with text but no title keeps the text as its title, and the owner’s line', () => {
+    expect(shareToEntry(yt, 'link', 'for Sundays')).toEqual({ kind: 'link', text: 'for Sundays', data: { kind: 'link', url: 'https://youtu.be/abc', title: 'Lofi beats to study to' } });
+  });
+  it('a quote keeps the owner’s line as where it came from', () => {
+    expect(shareToEntry({ title: '', text: 'Be kind.', url: '' }, 'quote', 'Mum read this out at dinner')).toEqual({ kind: 'quote', text: 'Be kind.', data: { kind: 'quote', who: 'A book or film', where: 'Mum read this out at dinner' } });
+  });
+  it('watched carries the title and the owner’s line into the form', () => {
+    expect(shareToEntry({ title: 'Up', text: '', url: '' }, 'watched', 'with Ma')).toEqual({ media: { title: 'Up', note: 'with Ma' } });
+  });
+  it('an address Logbook won’t open is kept as words, not lost', () => {
+    expect(shareToEntry({ title: '', text: '', url: 'javascript:alert(1)' }, 'link', '')).toEqual({ kind: 'link', text: '', data: { kind: 'link', url: '', title: 'javascript:alert(1)' } });
+  });
+  it('trailing punctuation is not part of an address found in text', () => {
+    expect(readShare('?text=' + encodeURIComponent('See (https://example.com/a).'))!.url).toBe('https://example.com/a');
+  });
+});

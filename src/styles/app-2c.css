@@ -28,7 +28,7 @@ canvas.clock{width:100%; height:270px; display:block}
 .of-f canvas{width:28px; height:28px}
 .life{display:grid; gap:14px; flex:none}
 .lifeitem{display:grid; grid-template-columns:auto 30px minmax(0, 1fr); gap:10px; align-items:start}
-.lifeitem b{font-family:"Archivo", var(--body); font-stretch:125%; font-weight:800; font-size:var(--f16)}
+.lifeitem b{font-family:var(--num); font-stretch:125%; font-weight:800; font-size:var(--f16)}
 .lifeitem canvas{width:30px; height:30px}
 .emogrid{grid-template-columns:repeat(auto-fit, minmax(min(100%, 5.6em), 1fr))}
 .gal{gap:2px; margin-inline:-6px}

@@ -27,14 +27,14 @@ export function yearReport(year: number, d: { entries: Entry[]; moments: Moment[
   const numbers: Report['numbers'] = [];
   if (ms.length) numbers.push({ n: ms.length, label: 'feelings named', sub: plural(new Set(ms.map(m => m.family)).size, 'family', 'families') });
   const days = new Set([...ms.map(m => m.day), ...es.filter(byOwner).map(e => e.day)]);
-  numbers.push({ n: days.size, label: days.size === 1 ? 'day kept' : 'days kept', sub: plural(ms.length, 'moment') });
+  numbers.push({ n: days.size, label: days.size === 1 ? 'day kept' : 'days kept', sub: ms.length ? plural(ms.length, 'moment') : '' });
   const visits = es.filter(e => e.data?.kind === 'place'), placeIds = new Set(visits.map(e => (e.data as { placeId: number }).placeId));
   if (placeIds.size) { const firsts = visits.filter(e => (e.data as { first: boolean }).first).length; numbers.push({ n: placeIds.size, label: placeIds.size === 1 ? 'place' : 'places', sub: firsts ? `${firsts} ${firsts === 1 ? 'was a first' : 'were firsts'}` : 'all ones you knew' }); }
   const who = es.flatMap(e => e.people.map(p => ({ p, day: e.day }))), initials = new Set(who.map(w => w.p));
   if (initials.size) {
     const [bestP] = top([...new Set(who.map(w => `${w.p}|${w.day}`))].map(k => k.split('|')[0]))[0], theirDays = [...new Set(who.filter(w => w.p === bestP).map(w => w.day))];
-    const name = d.people.find(p => p.initial === bestP)?.name ?? bestP, wd = top(theirDays.map(x => parseDay(x).getDay()))[0][0];
-    numbers.push({ n: initials.size, label: initials.size === 1 ? 'person' : 'people', sub: theirDays.length >= 3 ? `${name} turns up most on ${WEEKDAYS[wd]}s` : plural(theirDays.length, 'day') + ` with ${name}` });
+    const name = d.people.find(p => p.initial === bestP)?.name ?? bestP, byWd = top(theirDays.map(x => parseDay(x).getDay()), 2), wd = byWd[0][0], clear = !byWd[1] || byWd[0][1] > byWd[1][1];
+    numbers.push({ n: initials.size, label: initials.size === 1 ? 'person' : 'people', sub: theirDays.length >= 3 && clear ? `${name} turns up most on ${WEEKDAYS[wd]}s` : plural(theirDays.length, 'day') + ` with ${name}` });
   }
   const notable: Report['notable'] = [];
   if (fams.length) {
@@ -74,12 +74,8 @@ export function onThisDay(entries: Entry[], today: string): { year: number; entr
   [...entries].filter(e => !e.marks.quiet && byOwner(e) && e.day.slice(5) === md && Number(e.day.slice(0, 4)) < y).sort((a, b) => a.at - b.at).forEach(e => { const yr = Number(e.day.slice(0, 4)); if (!by.has(yr)) by.set(yr, e); });
   return [...by].sort((a, b) => b[0] - a[0]).map(([year, entry]) => ({ year, entry }));
 }
-export function randomDay(days: string[], rand: () => number, exclude: Set<string>): string | null {
-  const pool = days.filter(d => !exclude.has(d)); return pool.length ? pool[Math.min(pool.length - 1, Math.floor(rand() * pool.length))] : null;
-}
-export function thenAndNow(entries: Entry[], day: string): { then?: { year: number; entry: Entry }; now?: Entry } {
-  const now = [...entries].filter(e => e.day === day && !e.marks.quiet).sort((a, b) => a.at - b.at)[0], then = onThisDay(entries, day)[0];
-  return { ...(then ? { then } : {}), ...(now ? { now } : {}) };
+export function randomDay(days: string[], rand: () => number, exclude: Set<string>, last?: string | null): string | null {
+  const all = days.filter(d => !exclude.has(d)), pool = all.length > 1 && last ? all.filter(d => d !== last) : all; return pool.length ? pool[Math.min(pool.length - 1, Math.floor(rand() * pool.length))] : null;
 }
 /* An echo: the latest earlier day you named the same feeling, never from a "don't bring back" line. */
 export function echoFor(moment: Moment, moments: Moment[], entries: Entry[]): { day: string; word: string } | null {

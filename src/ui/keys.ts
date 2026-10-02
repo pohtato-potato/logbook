@@ -5,10 +5,10 @@ import { go, type Route } from '../router';
 export type KeyTarget = { tagName?: string; isContentEditable?: boolean } | null;
 export type KeyAct = 'search' | 'write' | 'prev' | 'next' | 'calendar' | 'today' | 'close';
 /* The laptop keys. They never fire while typing (except Escape), or with Ctrl, Cmd or Alt held. "g" waits for one more key. */
-export function keyAction(e: { key: string; target: KeyTarget; ctrlKey?: boolean; metaKey?: boolean; altKey?: boolean }, pending: string | null): { action?: KeyAct; pending: string | null } {
+export function keyAction(e: { key: string; target: KeyTarget; ctrlKey?: boolean; metaKey?: boolean; altKey?: boolean; modal?: boolean; repeat?: boolean }, pending: string | null): { action?: KeyAct; pending: string | null } {
   if (e.key === 'Escape') return { action: 'close', pending: null };
   const t = e.target, typing = !!t && (/^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName ?? '') || !!t.isContentEditable);
-  if (typing || e.ctrlKey || e.metaKey || e.altKey) return { pending: null };
+  if (typing || e.ctrlKey || e.metaKey || e.altKey || e.modal || e.repeat) return { pending: null }; // an open dialog keeps the keys; a held key doesn't repeat moves
   const k = e.key.toLowerCase();
   if (pending === 'g') return k === 'c' ? { action: 'calendar', pending: null } : k === 't' ? { action: 'today', pending: null } : { pending: null };
   if (k === 'g') return { pending: 'g' };
@@ -21,7 +21,7 @@ export function useKeys(route: Route, enabled: boolean) {
   useEffect(() => {
     if (!enabled) return;
     const on = (e: KeyboardEvent) => {
-      const r = keyAction({ key: e.key, target: e.target as KeyTarget, ctrlKey: e.ctrlKey, metaKey: e.metaKey, altKey: e.altKey }, pending.current); pending.current = r.pending;
+      const r = keyAction({ key: e.key, target: e.target as KeyTarget, ctrlKey: e.ctrlKey, metaKey: e.metaKey, altKey: e.altKey, repeat: e.repeat, modal: !!document.querySelector('[aria-modal="true"]') }, pending.current); pending.current = r.pending;
       const here = routeRef.current, day = here.name === 'day' ? here.day : here.name === 'today' ? dayKey(new Date()) : null;
       switch (r.action) {
         case 'search': e.preventDefault(); go({ name: 'search' }); break;

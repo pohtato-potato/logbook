@@ -1,4 +1,5 @@
 import type { DayRow, Entry, Moment } from '../db/types';
+import type { Postcard } from '../sources/shelf';
 import { FAMILY_NAME, ladderName } from '../vocab/vocab';
 import { weatherLine } from './stamps';
 import { safeUrl } from '../share';
@@ -11,16 +12,20 @@ export { plainWords };
 /* The day's files in the export, as paths relative to the zip's root. */
 export type DayFiles = { photos: { path: string; potd: boolean }[]; audio: Map<number, string>; keepPhotos?: Map<number, string> };
 /* A kept link becomes a real Markdown link, but only for a web address. */
-const webLink = (e: Entry, line: string) => { if (e.data?.kind !== 'link') return line; const u = safeUrl(e.data.url), label = e.data.title || hostOf(e.data.url) || 'a shared link'; return u ? line.replace(`Link: ${label}.`, `Link: [${label.replace(/[[\]]/g, '')}](${u}).`) : line; };
+const webLink = (e: Entry, line: string) => { if (e.data?.kind !== 'link') return line; const u = safeUrl(e.data.url), label = e.data.title || hostOf(e.data.url) || 'a shared link'; return u ? line.replace(`Link: ${label}.`, `Link: [${label.replace(/[[\]]/g, '')}](<${u.replace(/[<>\s]/g, encodeURIComponent)}>).`) : line; };
 const keepLink = (e: Entry, line: string, path?: string) => (path && e.data?.kind === 'keep' ? `${line} ![Keepsake](../../${path})` : line);
 const written = (ms: number) => parseDay(localDate(ms)).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
 const voiceLink = (e: Entry, line: string, path?: string) => (path && e.data?.kind === 'voice' ? line.replace(/^(Voice note, [0-9:]+)\./, `[$1](../../${path}).`) : line);
 const q = (s: string) => '"' + s.replace(/\\/g, '\\\\').replace(/"/g, '\\"') + '"';
+const hm = (m: number) => { const r = Math.round(m); return `${Math.floor(r / 60)} h ${r % 60} m`; };
+const postcardFacts = (p: Postcard) => [p.steps != null && `Steps: ${p.steps.toLocaleString('en-GB')}`, p.sleepMin != null && `Sleep: ${hm(p.sleepMin)}`, `Workout: ${p.workout ? `${p.workout.name}, ${p.workout.minutes} min` : 'a rest day'}`, p.walk && `India walk: ${Math.round(p.walk.km)} km, at ${p.walk.place}`].filter((x): x is string => !!x);
 /* One day as a plain Markdown file anyone can read in ten years: front matter, then entries and feelings in time order. */
-export function dayToMarkdown(day: string, row: DayRow | undefined, entries: Entry[], moments: Moment[], lk: Lookup = EMPTY_LOOKUP, files: DayFiles = { photos: [], audio: new Map() }): string {
+export function dayToMarkdown(day: string, row: DayRow | undefined, entries: Entry[], moments: Moment[], lk: Lookup = EMPTY_LOOKUP, files: DayFiles = { photos: [], audio: new Map() }, postcard?: Postcard): string {
   const fm = ['---', `date: ${day}`];
   if (row?.overall) fm.push(`overall: ${q(`${row.overall.word} (${FAMILY_NAME[row.overall.family]}, ${ladderName(row.overall.family, row.overall.strength)})`)}`);
   if (row?.stamps?.weather) fm.push(`weather: ${q(weatherLine(row.stamps.weather))}`);
+  const song = row?.stamps?.song; if (song?.track) fm.push(`song: ${q(`${song.track}, ${song.artist} (${song.plays} ${song.plays === 1 ? 'play' : 'plays'})`)}`);
+  if (row?.headline) fm.push(`headline: ${q(row.headline)}`);
   const air = row?.stamps?.air; if (air && !air.none && air.aqi != null && air.category) fm.push(`air: ${q(airWords({ aqi: air.aqi, category: air.category }))}`);
   const tags = [...new Set(entries.flatMap(e => e.tags))], people = [...new Set(entries.flatMap(e => e.people))];
   if (tags.length) fm.push(`tags: [${tags.map(q).join(', ')}]`);
@@ -43,5 +48,6 @@ export function dayToMarkdown(day: string, row: DayRow | undefined, entries: Ent
   }
   if (files.photos.length) { body.push('## Photos', ''); [...files.photos].sort((a, b) => Number(b.potd) - Number(a.potd)).forEach(p => body.push(`![Photo](../../${p.path})${p.potd ? ' (photo of the day)' : ''}`, '')); }
   if (row?.grateful) body.push('## Grateful for', '', row.grateful, '');
+  if (postcard) body.push('## Postcard from Health', '', postcard.line, '', ...postcardFacts(postcard).map(f => `- ${f}`), '');
   return fm.join('\n') + body.join('\n');
 }

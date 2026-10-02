@@ -6,7 +6,7 @@ import type { Postcard } from '../sources/shelf';
 const DAY = { bg: '#151821', edge: '#272c37', text: '#ede9e3', quiet: '#a3a1a8', apricot: '#e9a77c', sage: '#8fc9b0', lav: '#b7a6f0' };
 const NIGHT = { bg: '#121016', edge: '#221e26', text: '#d8cfc3', quiet: '#a79d94', apricot: '#c99173', sage: '#7fae99', lav: '#9d90cc' };
 const pct = (x: number) => (x >= 1 ? 'closed' : `${Math.round(x * 100)}%`);
-const hm = (m: number) => `${Math.floor(m / 60)} h ${Math.round(m % 60)} m`;
+const hm = (m: number) => { const r = Math.round(m); return `${Math.floor(r / 60)} h ${r % 60} m`; };
 export function PostcardView({ card, night }: { card: Postcard; night: boolean }) {
   const C = night ? NIGHT : DAY, day = parseDay(card.day).toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric' });
   const ring = (r: number, p: number, col: string) => { const c = 2 * Math.PI * r; return <g key={r}><circle cx="50" cy="50" r={r} fill="none" stroke={col} strokeOpacity=".16" strokeWidth="8" />

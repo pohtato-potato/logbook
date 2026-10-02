@@ -4,7 +4,7 @@
 .hp-body{display:grid; grid-template-columns:auto minmax(0, 1fr); gap:14px; align-items:center}
 .hp-rings{width:calc(var(--u, 16px) * 5.2); height:calc(var(--u, 16px) * 5.2)}
 .hp-nums p{font-size:var(--f16, 17px); line-height:1.35; margin:0}
-.hp-nums b{font-family:"Archivo", var(--body); font-stretch:125%; font-weight:800; font-size:var(--f18, 20px)}
+.hp-nums b{font-family:var(--num); font-stretch:125%; font-weight:800; font-size:var(--f18, 20px)}
 .hp-note{color:var(--hp-quiet); font-size:var(--f13, 13px); margin:0}
 .hp-q{color:var(--hp-quiet); font-size:var(--f14, 14px); font-style:italic; margin:0}
 .hp-list{display:grid; gap:4px; border-top:1px solid var(--hp-edge); padding-top:8px}

@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { db } from '../db/db';
 import { keepEntry } from '../db/actions';
 import { hostOf } from '../domain/entryText';
-import { clearShare, safeUrl, takeShare, type Shared } from '../share';
+import { clearShare, safeUrl, setMediaPrefill, shareToEntry, takeShare, type Shared } from '../share';
 import { Icon } from '../ui/Icons';
 import { useUndo } from '../ui/Undo';
 import { go } from '../router';
@@ -31,11 +31,10 @@ export function ShareSheet() {
   const done = () => { clearShare(); go({ name: 'today' }); };
   return <ShareSheetView shared={shared} as={as} line={line} onAs={setAs} onLine={setLine} onCancel={done} onKeep={async () => {
     if (!shared) return done();
-    if (as === 'watched') { try { sessionStorage.setItem('logbook-media-title', shared.title || shared.text.slice(0, 120)); } catch { /* the form just starts empty */ } clearShare(); go({ name: 'form', kind: 'media' }); return; }
+    const k = shareToEntry(shared, as, line);
+    if ('media' in k) { setMediaPrefill(k.media); clearShare(); go({ name: 'form', kind: 'media' }); return; }
     try {
-      const r = as === 'quote'
-        ? await keepEntry(db, { kind: 'quote', text: shared.text, data: { kind: 'quote', who: 'A book or film' }, at: new Date() })
-        : await keepEntry(db, { kind: 'link', text: line, data: { kind: 'link', url: safeUrl(shared.url) ?? '', ...(shared.title ? { title: shared.title } : {}) }, at: new Date() });
+      const r = await keepEntry(db, { ...k, at: new Date() });
       undo.show(r.undo, 'Kept in today.', { carry: true }); done();
     } catch (e) { undo.fail(e); }
   }} />;

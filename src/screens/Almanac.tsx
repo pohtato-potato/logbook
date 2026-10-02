@@ -72,7 +72,7 @@ export function RandomView({ pick, enough, onAnother, onOpen, today, then, now }
 }
 export function Almanac({ tab = 'report' }: { tab?: AlmTab }) {
   const now = useNow(), today = dayKey(now), year = Number(today.slice(0, 4)), undo = useUndo(), { locked } = usePrivacy();
-  const [line, setLine] = useState(''), [seed, setSeed] = useState(() => Math.random());
+  const [line, setLine] = useState(''), [seed, setSeed] = useState(() => Math.random()), [last, setLast] = useState<string | null>(null);
   const d = useLiveQuery(async () => {
     const [rawEntries, rawMoments, rows, places, people, settings, lookup] = await Promise.all([db.entries.toArray(), db.moments.toArray(), db.days.toArray(), db.places.toArray(), db.people.toArray(), getSettings(db), loadLookup(db)]);
     const entries = maskPrivate(rawEntries, locked), moments = maskMoments(rawMoments, rawEntries, locked);
@@ -100,8 +100,8 @@ export function Almanac({ tab = 'report' }: { tab?: AlmTab }) {
   } else if (tab === 'wrapped') body = <Wrapped month={today.slice(0, 7)} entries={d.entries} moments={d.moments} people={d.people} lookup={d.lookup} />;
   else {
     const quietDays = new Set(d.kept.filter(day => { const es = d.entries.filter(e => e.day === day); return es.length > 0 && es.every(e => e.marks.quiet || (locked && e.marks.priv)); }));
-    const pickDay = randomDay(d.kept.filter(x => x !== today), () => seed, quietDays), fams = dayFamilies(d.moments, d.rows), then = onThisDay(d.entries.filter(e => !(locked && e.marks.priv)), today)[0], nowLine = lineOf(today);
-    body = <RandomView enough={d.kept.length >= 2} today={today} onAnother={() => setSeed(Math.random())} onOpen={day => go({ name: 'day', day })}
+    const quiet = new Set(d.entries.filter(e => e.marks.quiet).map(e => e.id)), pickDay = randomDay(d.kept.filter(x => x !== today), () => seed, quietDays, last), fams = dayFamilies(d.moments.filter(m => m.entryId == null || !quiet.has(m.entryId)), d.rows), then = onThisDay(d.entries.filter(e => !(locked && e.marks.priv)), today)[0], nowLine = lineOf(today);
+    body = <RandomView enough={d.kept.length >= 2} today={today} onAnother={() => { setLast(pickDay); setSeed(Math.random()); }} onOpen={day => go({ name: 'day', day })}
       pick={pickDay ? { day: pickDay, family: fams.get(pickDay)?.family, line: lineOf(pickDay) } : null}
       then={then ? { year: then.year, line: entryLine(then.entry, d.lookup) } : null} now={nowLine ? { line: nowLine } : null} />;
   }

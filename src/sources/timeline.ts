@@ -1,5 +1,6 @@
 import { addDays, dayKey, parseDay } from '../domain/day';
 import { haversineKm } from '../domain/stamps';
+import { roundCoord } from '../domain/geo';
 import type { Place } from '../db/types';
 
 /* Reading a Google Maps Timeline export the owner picked. Nothing leaves the phone: the file is read here, shown as a preview, and only then kept.
@@ -54,7 +55,7 @@ export function planImport(visits: Visit[], known: Place[]): ImportPlan {
       let p = near(v.lat, v.lon);
       if (!p) {
         const k = known.find(x => x.lat != null && x.lon != null && haversineKm(x.lat, x.lon, v.lat, v.lon) <= NEAR_KM) ?? known.find(x => x.lat == null && x.name.toLowerCase() === nameFor(v).toLowerCase());
-        p = { key: places.length, name: k?.name ?? nameFor(v), lat: k?.lat ?? v.lat, lon: k?.lon ?? v.lon, ...(k?.id != null ? { existingId: k.id } : {}) };
+        p = { key: places.length, name: k?.name ?? nameFor(v), lat: k?.lat ?? roundCoord(v.lat), lon: k?.lon ?? roundCoord(v.lon), ...(k?.id != null ? { existingId: k.id } : {}) };
         places.push(p);
       }
       key = p.key; if (v.placeId) byGoogleId.set(v.placeId, key);

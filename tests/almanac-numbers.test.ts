@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { echoFor, monthLines, onThisDay, randomDay, thenAndNow, weekLineSuggestion, weekOf, yearReport } from '../src/domain/almanac';
+import { echoFor, monthLines, onThisDay, randomDay, weekLineSuggestion, weekOf, yearReport } from '../src/domain/almanac';
 
 const e = (id: number, day: string, x: object = {}) => ({ id, day, at: new Date(day + 'T12:00:00').getTime(), tz: 'UTC', kind: 'line', text: `line ${id}`, marks: {}, tags: [], people: [], writtenAt: 0, ...x }) as never;
 const m = (id: number, day: string, word: string, family: string, entryId?: number) => ({ id, day, at: new Date(day + 'T12:00:00').getTime(), word, family, strength: 3, ...(entryId ? { entryId } : {}) }) as never;
@@ -25,7 +25,6 @@ describe('weeks, days and echoes', () => {
     expect(onThisDay(es, '2026-09-29').map(x => [x.year, x.entry.id])).toEqual([[2025, 1]]);
     expect(onThisDay(es, '2028-02-29').map(x => x.year)).toEqual([2024]); expect(onThisDay(es, '2027-02-28')).toEqual([]);
   });
-  it('then and now skips years without the date', () => expect(thenAndNow([e(5, '2024-02-29'), e(6, '2028-02-29')], '2028-02-29')).toMatchObject({ then: { year: 2024 }, now: { id: 6 } }));
   it('a random day is never a "don’t bring back" day', () => { for (let i = 0; i < 20; i++) expect(randomDay(['a', 'b'], () => i / 20, new Set(['a']))).toBe('b'); expect(randomDay(['a'], Math.random, new Set(['a']))).toBeNull(); });
   it('an echo finds the latest earlier day with the same word, skipping quiet lines', () => {
     const ms = [m(1, '2026-03-14', 'wistful', 'wistful'), m(2, '2026-05-01', 'wistful', 'wistful', 9), m(3, '2026-09-29', 'wistful', 'wistful')];

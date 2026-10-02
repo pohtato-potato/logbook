@@ -1,4 +1,5 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { clearMediaPrefill, peekMediaPrefill } from '../../share';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../../db/db';
 import { getSettings, keepEntry, keepPlace, keepSpan, type EntryDraft, type Undo } from '../../db/actions';
@@ -31,7 +32,8 @@ const words = (d: string) => parseDay(d).toLocaleDateString('en-GB', { day: 'num
 export function FormScreen({ kind }: { kind: FormKind }) {
   const now = useNow(), keep = useKeeper(), undo = useUndo(), sub = `It lands in today, at ${timeLabel(new Date())}`;
   const data = useLiveQuery(async () => ({ people: await db.people.toArray(), places: await db.places.toArray(), homes: (await getSettings(db)).homes, google: googlePhotosReady(await getSettings(db)) }), []);
-  const [media, setMedia] = useForm<MediaState>({ media: 'Film', title: (() => { try { const t = sessionStorage.getItem('logbook-media-title') ?? ''; sessionStorage.removeItem('logbook-media-title'); return t; } catch { return ''; } })(), rating: 5, current: false, note: '' });
+  const [prefill] = useState(peekMediaPrefill); useEffect(() => clearMediaPrefill(), []);
+  const [media, setMedia] = useForm<MediaState>({ media: 'Film', title: prefill.title, rating: 5, current: false, note: prefill.note });
   const [quote, setQuote] = useForm<QuoteState>({ text: '', who: 'Overheard', where: '' });
   const [place, setPlace] = useForm<PlaceState>({ name: '', first: false });
   const [pos, setPos] = useState<{ lat: number; lon: number } | null>(null), [locating, setLocating] = useState(false), [placeErr, setPlaceErr] = useState('');

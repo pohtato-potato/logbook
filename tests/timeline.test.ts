@@ -30,6 +30,7 @@ describe('planning and importing', () => {
     const plan = planImport(parseTimeline(android), []);
     expect(plan.places.map(p => p.name)).toEqual(['Home', 'A place near 10.05, 20.05']); expect(plan.visits.length).toBe(3);
     expect(plan.summary).toBe('3 visits on 2 days at 2 places, 1 May 2024 to 2 May 2024.');
+    expect(plan.places[0]).toMatchObject({ lat: 10.001, lon: 20.001 }); // kept to about 100 m, like every other place
   });
   it('a known place nearby is reused, not doubled', () => {
     const plan = planImport(parseTimeline(android), [{ id: 7, name: 'Home sweet home', first: false, visits: 4, lat: 10.001, lon: 20.001 }]);

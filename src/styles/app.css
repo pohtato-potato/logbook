@@ -25,7 +25,7 @@ h1,h2,h3{margin:0; font-weight:700}
 .lbl{font-size:var(--f14); font-weight:700; color:var(--ink); letter-spacing:0}
 .subl{font-size:var(--f14); font-weight:700; color:var(--muted); margin-top:calc(1rem * .25)}
 .center{text-align:center}
-.rn{font-family:"Archivo", var(--body); font-stretch:125%; font-weight:800; letter-spacing:-.01em; font-size:var(--f26); line-height:1; font-variant-numeric:tabular-nums}
+.rn{font-family:var(--num); font-stretch:125%; font-weight:800; letter-spacing:-.01em; font-size:var(--f26); line-height:1; font-variant-numeric:tabular-nums}
 .rn svg{width:.8em; height:.8em; fill:currentColor; stroke:none}
 .panel{background:var(--card); -webkit-backdrop-filter:blur(16px); backdrop-filter:blur(16px); border:1px solid var(--rule); border-radius:20px; padding:calc(1rem * .8) calc(1rem * .85); display:grid; gap:calc(1rem * .6); flex:none; position:relative}
 .thead{display:grid; gap:calc(1rem * .3); padding:2px; position:relative; flex:none}

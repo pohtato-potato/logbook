@@ -86,3 +86,11 @@ describe('I3: Google’s refusals are told as they are', () => {
     expect(forget).toHaveBeenCalled(); vi.unstubAllGlobals();
   });
 });
+
+describe('I13: the laptop calendar’s days are 44 px targets', () => {
+  it('each day column is at least 2.75rem, and the reading room opens only where it fits', () => {
+    const css = readFileSync(new URL('../src/styles/app-desk.css', import.meta.url), 'utf8');
+    expect(css).toMatch(/\.lp-cal\{[^}]*grid-template-columns:repeat\(7, minmax\(2\.75rem, 1fr\)\)/);
+    expect(readFileSync(new URL('../src/ui/useWide.ts', import.meta.url), 'utf8')).toContain("(min-width: 68em)");
+  });
+});
