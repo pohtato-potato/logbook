@@ -1,3 +1,5 @@
+> **Resolved 2026-10-02** in the final review fix pass (see final-review.md): every item below is fixed.
+
 # Findings waiting for the final comprehensive review
 
 The owner asked (2026-10-02) for one comprehensive review after the whole build, not one per stage.
