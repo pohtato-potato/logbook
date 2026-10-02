@@ -15,7 +15,7 @@ export type EntryData =
   | { kind: 'past' }
   | { kind: 'link'; url: string; title?: string }; // url is '' when it wasn't a web address
 /* text holds the entry's own words: the line, the quote, a note on a film, the keepsake's name. */
-export type Entry = { id?: number; day: string; at: number; tz: string; kind: EntryKind; text: string; marks: Marks; tags: string[]; people: string[]; writtenAt: number; data?: EntryData };
+export type Entry = { id?: number; day: string; at: number; tz: string; kind: EntryKind; text: string; marks: Marks; tags: string[]; people: string[]; writtenAt: number; data?: EntryData; source?: 'timeline' };
 export type Photo = { id?: number; day: string; blob: Blob; thumb: Blob; takenAt?: number; addedAt: number };
 export type Place = { id?: number; name: string; lat?: number; lon?: number; first: boolean; visits: number };
 export type Span = { id?: number; name: string; from: string; to: string; family: Family };

@@ -8,7 +8,7 @@ export interface Undo { label: string; run: () => Promise<void> }
 export class StorageFullError extends Error { constructor() { super('The phone is out of space. Nothing was saved, and your words are still in the box.'); this.name = 'StorageFullError'; } }
 const HOUR = 3600_000;
 /* Runs a write; a full disk becomes StorageFullError. Dexie transactions roll back, so nothing half-saves. */
-async function guard<T>(fn: () => Promise<T>): Promise<T> {
+export async function guard<T>(fn: () => Promise<T>): Promise<T> {
   try { return await fn(); } catch (e) {
     const name = (e as { name?: string }).name ?? '';
     const inner = (e as { inner?: { name?: string } }).inner?.name ?? '';
@@ -17,7 +17,7 @@ async function guard<T>(fn: () => Promise<T>): Promise<T> {
   }
 }
 /* An Undo runs at most once. */
-function once(label: string, fn: () => Promise<unknown>): Undo { let done = false; return { label, run: async () => { if (done) return; done = true; await fn(); } }; }
+export function once(label: string, fn: () => Promise<unknown>): Undo { let done = false; return { label, run: async () => { if (done) return; done = true; await fn(); } }; }
 
 export async function keepLine(db: LogbookDb, { text, marks, at }: { text: string; marks: Marks; at: Date }, own: Record<string, Family>) {
   const clean = text.trim();

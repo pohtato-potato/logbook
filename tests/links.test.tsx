@@ -25,4 +25,12 @@ describe('linked sources', () => {
     const set = renderToStaticMarkup(<SettingsView {...props} settings={{ ...DEFAULT_SETTINGS, links: { lastfm: ['a'], lastfmKey: 'k', googleClientId: 'x' }, sources: { weather: true, places: true, songs: false, drive: true, photos: true } }} />);
     expect(set).toMatch(/role="switch" aria-checked="false" aria-label="Songs"/); expect(set).toContain('Set up for a.');
   });
+  it('Settings offers the Timeline import, and shows what a file holds before anything is kept', () => {
+    const idle = renderToStaticMarkup(<SettingsView {...props} settings={DEFAULT_SETTINGS} />);
+    expect(idle).toContain('Google Maps Timeline'); expect(idle).toContain('Choose file');
+    const seen = renderToStaticMarkup(<SettingsView {...props} settings={DEFAULT_SETTINGS} timeline={{ summary: '3 visits on 2 days at 2 places, 1 May 2024 to 2 May 2024.', count: 3 }} />);
+    expect(seen).toContain('3 visits on 2 days at 2 places'); expect(seen).toContain('Add them'); expect(seen).toContain('Not now');
+    const none = renderToStaticMarkup(<SettingsView {...props} settings={DEFAULT_SETTINGS} timeline={{ summary: 'No visits from 2022 on were found in this file.', count: 0 }} />);
+    expect(none).not.toContain('Add them');
+  });
 });
