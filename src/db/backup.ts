@@ -1,11 +1,12 @@
+import { guard } from './actions';
 import type { LogbookDb } from './db';
 import { makeZip, readZip } from '../domain/zip';
 
 export class BackupError extends Error { constructor(msg: string) { super(msg); this.name = 'BackupError'; } }
 export interface Backup { format: 'logbook-backup'; version: 1; exportedAt: string; tables: Record<string, unknown[]> }
 /* Every table. Photos arrived in Stage 2, so a Stage 1 backup without them still restores. */
-const TABLES = ['entries', 'moments', 'days', 'people', 'words', 'settings', 'places', 'spans', 'postcards', 'tags', 'photos'] as const;
-const OPTIONAL = new Set<string>(['photos']);
+const TABLES = ['entries', 'moments', 'days', 'people', 'words', 'settings', 'places', 'spans', 'postcards', 'tags', 'photos', 'songs'] as const;
+const OPTIONAL = new Set<string>(['photos', 'songs']); // older backups were made before these tables
 /* Photos and voice notes are Blobs; in the backup file each one becomes { __blob, type, base64 } and turns back into a Blob on restore. */
 async function pack(v: unknown): Promise<unknown> {
   if (v instanceof Blob) { const b = new Uint8Array(await v.arrayBuffer()); let s = ''; for (let i = 0; i < b.length; i += 0x8000) s += String.fromCharCode(...b.subarray(i, i + 0x8000)); return { __blob: true, type: v.type, base64: btoa(s) }; }
@@ -33,9 +34,9 @@ export async function restoreBackup(db: LogbookDb, data: unknown): Promise<void>
   if (!b || b.format !== 'logbook-backup' || b.version !== 1 || typeof b.tables !== 'object' || !b.tables) throw new BackupError(NOT_BACKUP);
   const tables = b.tables;
   if (TABLES.some(t => !OPTIONAL.has(t) && !Array.isArray(tables[t]))) throw new BackupError('This backup isn’t complete. Nothing was changed.');
-  await db.transaction('rw', TABLES.map(t => db.table(t)), async () => {
+  await guard(() => db.transaction('rw', TABLES.map(t => db.table(t)), async () => {
     for (const t of TABLES) { await db.table(t).clear(); const rows = tables[t]; if (Array.isArray(rows) && rows.length) await db.table(t).bulkPut(unpack(rows) as unknown[]); }
-  });
+  }));
 }
 
 /* The backup file: a zip holding backup.json, with every photo and voice note as its own file beside it (blobs/N).

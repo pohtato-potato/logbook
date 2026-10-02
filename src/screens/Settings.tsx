@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db/db';
-import { getSettings, saveSettings } from '../db/actions';
+import { StorageFullError, getSettings, saveSettings } from '../db/actions';
 import { DEFAULT_SETTINGS, type Settings as S } from '../db/types';
 import { makeMarkdownZip } from '../db/exportMarkdown';
 import { BackupError, makeBackupZip, restoreBackupFile } from '../db/backup';
@@ -9,11 +9,11 @@ import { StarterError, applyStarter, parseStarter } from '../db/starter';
 import { dayKey, parseDay } from '../domain/day';
 import { sourcesOf } from '../db/stamps';
 import { createLock, lockSupport } from '../domain/lock';
-import { DRIVE_SCOPE, signIn } from '../sources/google';
+import { DRIVE_SCOPE, backFromGoogle, signIn } from '../sources/google';
 import { backupToDrive } from '../sources/drive';
-import { authCall } from '../sources/http';
+import { authCall, authSend } from '../sources/http';
 import { usePrivacy } from '../ui/Privacy';
-import { useUndo } from '../ui/Undo';
+import { failMessage, useUndo } from '../ui/Undo';
 import { parseTimeline, planImport, type ImportPlan } from '../sources/timeline';
 import { importTimeline } from '../db/timeline';
 import { VOICES } from '../domain/voices';
@@ -81,11 +81,14 @@ export function SettingsView(p: SettingsProps) {
   </div><Tabs current="" /></div>;
 }
 export function Settings() {
-  const settings = useLiveQuery(() => getSettings(db), []) ?? DEFAULT_SETTINGS, [message, setMessage] = useState(''), privacy = usePrivacy(), [supported, setSupported] = useState<boolean | null>(null), undo = useUndo(), [plan, setPlan] = useState<ImportPlan | null>(null);
+  const settings = useLiveQuery(() => getSettings(db), []) ?? DEFAULT_SETTINGS, [message, setMessage] = useState(() => backFromGoogle() ?? ''), busy = useRef(false), privacy = usePrivacy(), [supported, setSupported] = useState<boolean | null>(null), undo = useUndo(), [plan, setPlan] = useState<ImportPlan | null>(null);
   useEffect(() => { void lockSupport().then(setSupported); }, []);
   const opened = async () => !privacy.locked || (await privacy.unlock()); // private text leaves the app only after the owner unlocks
   const today = dayKey(new Date());
-  const act = (fn: () => Promise<unknown>) => async () => { setMessage(''); try { await fn(); } catch (e) { setMessage(e instanceof BackupError || e instanceof StarterError || (e as Error).name === 'PlainMessage' ? (e as Error).message : 'That didn’t work. Nothing was changed; try again.'); } };
+  /* A known reason (a full phone, a refused file, Google's answer) is said as it is. A long action (marked one) runs one at a time: a second tap meanwhile does nothing. */
+  const act = (fn: () => Promise<unknown>, one = false) => async () => {
+    if (one && busy.current) return; if (one) busy.current = true; setMessage('');
+    try { await fn(); } catch (e) { setMessage(e instanceof BackupError || e instanceof StarterError ? e.message : e instanceof StorageFullError || (e as Error).name === 'PlainMessage' ? failMessage(e) : 'That didn’t work. Nothing was changed; try again.'); } finally { if (one) busy.current = false; } };
   const newLock = async () => { const made = await createLock(navigator.credentials, location.hostname, settings.lock?.userId); if (!made) return false; await saveSettings(db, { lock: { ...made, createdAt: Date.now() } }); return true; };
   return <SettingsView settings={settings} message={message} lockSupported={supported}
     onLock={on => void act(async () => {
@@ -97,7 +100,7 @@ export function Settings() {
     onDrive={() => void act(async () => {
       const id = settings.links?.googleClientId; if (!id || !(await opened())) return;
       const t = await signIn(id, [DRIVE_SCOPE]); if (!t) { setMessage('Sign-in didn’t finish, so nothing was sent to Drive.'); return; }
-      const r = await backupToDrive(db, authCall(t)); setMessage(`Backed up to Drive: ${r.files.join(' and ')}, in your Logbook folder.`); })()}
+      setMessage('Uploading to Drive…'); const r = await backupToDrive(db, { call: authCall(t), send: authSend(t) }, new Date(), { onProgress: f => setMessage(`Uploading to Drive: ${Math.round(f * 100)}%`) }); setMessage(`Backed up to Drive: ${r.files.join(' and ')}, in your Logbook folder.`); }, true)()}
     timeline={plan && { summary: plan.summary, count: plan.visits.length }}
     onTimelineFile={files => void act(async () => {
       setPlan(null); const visits = [];
@@ -107,12 +110,12 @@ export function Settings() {
     onTimelineKeep={() => void act(async () => {
       if (!plan) return;
       const r = await importTimeline(db, plan); setPlan(null);
-      undo.show(r.undo, r.added ? `Added ${r.added.toLocaleString('en-GB')} ${r.added === 1 ? 'visit' : 'visits'} from Timeline.` : 'Those visits were already in Logbook.'); })()}
+      undo.show(r.undo, r.added ? `Added ${r.added.toLocaleString('en-GB')} ${r.added === 1 ? 'visit' : 'visits'} from Timeline.` : 'Those visits were already in Logbook.'); }, true)()}
     onResetLock={() => void act(async () => { if (await newLock()) setMessage('The lock is set up again.'); })()}
     onVoice={voice => void saveSettings(db, { voice })} onDayStyle={dayStyle => void saveSettings(db, { dayStyle })} onTheme={theme => void saveSettings(db, { theme })} onMotion={motion => void saveSettings(db, { motion })}
-    onExport={act(async () => { if (!(await opened())) return; if (!(await saveFile(await makeMarkdownZip(db), `logbook-export-${today}.zip`))) return; await saveSettings(db, { lastExport: Date.now() }); setMessage('Exported. The zip holds one Markdown file per day.'); })}
-    onBackup={act(async () => { if (!(await opened())) return; await saveFile(await makeBackupZip(db), `logbook-backup-${today}.zip`); })}
-    onRestore={f => void act(async () => { if (!(await opened())) return; if (!confirm('Replace everything in Logbook with this backup?')) return; await restoreBackupFile(db, f); setMessage('Restored from the backup.'); })()}
+    onExport={act(async () => { if (!(await opened())) return; if (!(await saveFile(await makeMarkdownZip(db), `logbook-export-${today}.zip`))) return; await saveSettings(db, { lastExport: Date.now() }); setMessage('Exported. The zip holds one Markdown file per day.'); }, true)}
+    onBackup={act(async () => { if (!(await opened())) return; await saveFile(await makeBackupZip(db), `logbook-backup-${today}.zip`); }, true)}
+    onRestore={f => void act(async () => { if (!(await opened())) return; if (!confirm('Replace everything in Logbook with this backup?')) return; await restoreBackupFile(db, f); setMessage('Restored from the backup.'); }, true)()}
     onSource={(key, on) => void act(async () => { await saveSettings(db, { sources: { ...sourcesOf(settings), [key]: on } }); })()}
     onStarter={f => void act(async () => { await applyStarter(db, parseStarter(await f.text())); setMessage('Starter file loaded.'); })()} />;
 }

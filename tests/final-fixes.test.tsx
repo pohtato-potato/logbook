@@ -59,3 +59,30 @@ describe('I9 and the Timeline ruling: looking back names real places, and counts
     expect(onThisDay([visit], '2027-09-04')).toEqual([]);
   });
 });
+
+import { acceptReturn } from '../src/sources/google';
+describe('I1: a token is kept only when it answers Logbook’s own sign-in', () => {
+  const hash = '#access_token=abc&expires_in=3599&state=s1&scope=x';
+  it('a matching, recent request is accepted', () => expect(acceptReturn(hash, { state: 's1', at: 1000, popup: true }, 2000)).toMatchObject({ token: 'abc', popup: true }));
+  it('a link with someone else’s token is refused', () => {
+    expect(acceptReturn(hash, null, 2000)).toBeNull();
+    expect(acceptReturn(hash, { state: 'other', at: 1000, popup: false }, 2000)).toBeNull();
+    expect(acceptReturn(hash, { state: 's1', at: 0, popup: false }, 20 * 60_000)).toBeNull();
+  });
+});
+
+import { googleError, SignedOutError, authCall } from '../src/sources/http';
+import { vi } from 'vitest';
+describe('I3: Google’s refusals are told as they are', () => {
+  const body = (reason: string) => ({ error: { errors: [{ reason }] } });
+  it('a full Drive says so; a rate limit says to wait; a refused token is signed out', () => {
+    expect(googleError(403, body('storageQuotaExceeded')).message).toBe('Your Google Drive is full, so nothing more could be put there. Nothing on the phone changed.');
+    expect(googleError(403, body('userRateLimitExceeded')).message).toMatch(/slow down/);
+    expect(googleError(401, {})).toBeInstanceOf(SignedOutError); expect(googleError(403, body('insufficientPermissions'))).toBeInstanceOf(SignedOutError);
+  });
+  it('a refused token is forgotten, so signing in again asks Google', async () => {
+    const forget = vi.fn(); vi.stubGlobal('fetch', async () => new Response('{}', { status: 401, headers: { 'content-type': 'application/json' } }));
+    await expect(authCall('t', forget)('https://www.googleapis.com/drive/v3/files')).rejects.toBeInstanceOf(SignedOutError);
+    expect(forget).toHaveBeenCalled(); vi.unstubAllGlobals();
+  });
+});

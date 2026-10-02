@@ -23,28 +23,53 @@ const keep = (k: Kept) => { try { const cur = load(); sessionStorage.setItem(KEY
 export const token = (scopes: string[]) => usableToken(load(), scopes);
 export const signOut = () => { try { sessionStorage.removeItem(KEY); } catch { /* nothing kept */ } };
 const redirectUri = () => location.origin + location.pathname;
-/* Run once at start: if this page is Google sending the owner back, hand the token to the waiting Logbook window and close. */
+/* Each sign-in Logbook starts is written down first (its random state, when, and whether it used a small window).
+   A token that comes back is kept only when it answers that request, within ten minutes; any other token in the address is dropped. */
+const PENDING = 'logbook-google-pending', BACK = 'logbook-google-back';
+export type Pending = { state: string; at: number; popup: boolean };
+export function acceptReturn(hash: string, pending: Pending | null, now = Date.now()) {
+  const r = readTokenHash(hash, now);
+  if (!r || !pending || r.state !== pending.state || now - pending.at > 10 * 60_000) return null;
+  return { ...r, popup: pending.popup };
+}
+const loadPending = (): Pending | null => { try { const s = localStorage.getItem(PENDING); return s ? (JSON.parse(s) as Pending) : null; } catch { return null; } };
+const savePending = (p: Pending) => { try { localStorage.setItem(PENDING, JSON.stringify(p)); } catch { /* the return is then refused, safely */ } };
+/* Run once at start: if this page is Google sending the owner back, hand the token over (or keep it, when this tab went to Google itself). */
 export function handleAuthReturn(): boolean {
-  if (typeof location === 'undefined') return false;
-  const r = readTokenHash(location.hash); if (!r) return false;
-  try { new BroadcastChannel(CHANNEL).postMessage(r); } catch { /* old browser: fall back below */ }
-  if ('token' in r) keep({ token: r.token, expiresAt: r.expiresAt, scopes: r.scopes });
+  if (typeof location === 'undefined' || !readTokenHash(location.hash)) return false;
+  const r = acceptReturn(location.hash, loadPending());
+  try { localStorage.removeItem(PENDING); } catch { /* nothing kept */ }
   history.replaceState(null, '', location.pathname + '#/settings');
-  if (window.opener) window.close();
+  if (!r) return true; // not Logbook's own request: the token is dropped
+  if ('token' in r) keep({ token: r.token, expiresAt: r.expiresAt, scopes: r.scopes });
+  if (r.popup) {
+    try { const ch = new BroadcastChannel(CHANNEL); ch.postMessage(r); ch.close(); } catch { /* older browser: the opener below */ }
+    try { window.opener?.postMessage(r, location.origin); } catch { /* severed by Google's page */ }
+    window.close();
+  } else { try { sessionStorage.setItem(BACK, 'token' in r ? 'in' : 'no'); } catch { /* no notice, still signed in */ } }
   return true;
 }
-/* Opens Google's sign-in and waits for the token (up to three minutes). Null when the owner cancelled or closed the window. */
+/* After coming back from Google in this same tab: what Settings should say, once. */
+export function backFromGoogle(): string | null {
+  try { const b = sessionStorage.getItem(BACK); sessionStorage.removeItem(BACK); return b === 'in' ? 'Signed in to Google. Tap the button again to carry on.' : b === 'no' ? 'Sign-in didn’t finish, so nothing was sent.' : null; } catch { return null; }
+}
+/* Opens Google's sign-in and waits for the token (up to three minutes). Null when the owner cancelled or closed the window.
+   A closed window is believed only once Logbook is back in front, because Google's page can make a window look closed while it is open. */
 export function signIn(clientId: string, scopes: string[]): Promise<string | null> {
   const have = token(scopes); if (have) return Promise.resolve(have);
   const state = Array.from(crypto.getRandomValues(new Uint8Array(12)), b => b.toString(16).padStart(2, '0')).join('');
   const url = authUrl(clientId, scopes, redirectUri(), state);
+  savePending({ state, at: Date.now(), popup: true });
   return new Promise(resolve => {
-    const ch = new BroadcastChannel(CHANNEL); let done = false;
-    const finish = (t: string | null) => { if (done) return; done = true; ch.close(); clearInterval(watch); clearTimeout(limit); resolve(t); };
-    ch.onmessage = e => { const r = e.data as ReturnType<typeof readTokenHash>; if (!r || r.state !== state) return; if ('token' in r) { keep({ token: r.token, expiresAt: r.expiresAt, scopes: r.scopes }); finish(r.token); } else finish(null); };
-    const w = window.open(url, 'logbook-google', 'popup,width=480,height=680');
-    if (!w) { location.assign(url); return; } // pop-ups blocked: go there in this window; Logbook comes back to Settings signed in
-    const watch = window.setInterval(() => { if (w.closed) setTimeout(() => finish(token(scopes)), 400); }, 700);
-    const limit = window.setTimeout(() => finish(null), 3 * 60_000);
+    let ch: BroadcastChannel | null = null, done = false, w: Window | null = null;
+    const finish = (t: string | null) => { if (done) return; done = true; ch?.close(); removeEventListener('message', onMsg); removeEventListener('focus', onBack); document.removeEventListener('visibilitychange', onBack); clearTimeout(limit); resolve(t); };
+    const take = (r: unknown) => { const x = r as ReturnType<typeof readTokenHash>; if (!x || x.state !== state) return; if ('token' in x) { keep({ token: x.token, expiresAt: x.expiresAt, scopes: x.scopes }); finish(x.token); } else finish(null); };
+    const onMsg = (e: MessageEvent) => { if (e.origin === location.origin) take(e.data); };
+    const onBack = () => { if (document.visibilityState === 'visible') setTimeout(() => { if (w?.closed) finish(token(scopes)); }, 1500); };
+    try { ch = new BroadcastChannel(CHANNEL); ch.onmessage = e => take(e.data); } catch { /* older browser: window messages only */ }
+    addEventListener('message', onMsg); addEventListener('focus', onBack); document.addEventListener('visibilitychange', onBack);
+    const limit = window.setTimeout(() => finish(token(scopes)), 3 * 60_000);
+    w = window.open(url, 'logbook-google', 'popup,width=480,height=680');
+    if (!w) { savePending({ state, at: Date.now(), popup: false }); location.assign(url); } // pop-ups blocked: go there in this tab; Logbook comes back to Settings signed in
   });
 }

@@ -1,10 +1,10 @@
 import type { LogbookDb } from '../db/db';
-import { saveSettings } from '../db/actions';
+import { getSettings, saveSettings } from '../db/actions';
 import { sourcesOf } from '../db/stamps';
 import type { Settings } from '../db/types';
 import { makeMarkdownZip } from '../db/exportMarkdown';
 import { makeBackupZip } from '../db/backup';
-import type { AuthCall } from './http';
+import { OfflineError, type AuthCall, type AuthSend } from './http';
 
 /* Drive backup: a monthly copy of the export and the backup in a visible "Logbook" folder. With the drive.file permission,
    Logbook can only see the files it made itself; the rest of the Drive stays out of reach. */
@@ -14,16 +14,30 @@ async function folder(call: AuthCall): Promise<string> {
   const have = await find(call, `name='Logbook' and mimeType='${FOLDER}' and trashed=false`); if (have) return have;
   return ((await call(API, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: 'Logbook', mimeType: FOLDER }) })) as { id: string }).id;
 }
-async function put(call: AuthCall, parent: string, name: string, blob: Blob) {
-  const id = await find(call, `name='${name}' and '${parent}' in parents and trashed=false`), boundary = 'logbook' + Math.random().toString(16).slice(2);
-  const meta = id ? { name } : { name, parents: [parent] };
-  const body = new Blob([`--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify(meta)}\r\n--${boundary}\r\nContent-Type: ${blob.type || 'application/zip'}\r\n\r\n`, blob, `\r\n--${boundary}--`], { type: `multipart/related; boundary=${boundary}` });
-  await call(id ? `${UP}/${id}?uploadType=multipart` : `${UP}?uploadType=multipart`, { method: id ? 'PATCH' : 'POST', headers: { 'Content-Type': `multipart/related; boundary=${boundary}` }, body });
+/* Each file goes up as a resumable upload, a few MB at a time, so a large archive on a slow connection still gets there
+   (each piece has its own time limit). Drive's switch is read again before every piece. */
+const CHUNK = 4 * 1024 * 1024;
+async function put(g: Google, parent: string, name: string, blob: Blob, chunk: number, stillOn: () => Promise<void>, step: (bytes: number) => void) {
+  const id = await find(g.call, `name='${name}' and '${parent}' in parents and trashed=false`), type = blob.type || 'application/zip';
+  const start = await g.send(id ? `${UP}/${id}?uploadType=resumable` : `${UP}?uploadType=resumable`, { method: id ? 'PATCH' : 'POST', headers: { 'Content-Type': 'application/json; charset=UTF-8', 'X-Upload-Content-Type': type, 'X-Upload-Content-Length': String(blob.size) }, body: JSON.stringify(id ? { name } : { name, parents: [parent] }) });
+  const session = start.headers.get('Location'); if (!session?.startsWith('https://www.googleapis.com/')) throw new OfflineError();
+  let at = 0;
+  for (;;) {
+    await stillOn();
+    const end = Math.min(at + chunk, blob.size), r = await g.send(session, { method: 'PUT', headers: { 'Content-Range': `bytes ${at}-${end - 1}/${blob.size}` }, body: blob.slice(at, end) });
+    if (r.status === 308) { const got = r.headers.get('Range'); step((got ? Number(got.split('-')[1]) + 1 : end) - at); at = got ? Number(got.split('-')[1]) + 1 : end; continue; }
+    if (r.ok) { step(end - at); return; }
+    throw new OfflineError();
+  }
 }
-export async function backupToDrive(db: LogbookDb, call: AuthCall, now = new Date()): Promise<{ files: string[] }> {
-  const month = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`, parent = await folder(call);
+export type Google = { call: AuthCall; send: AuthSend };
+export async function backupToDrive(db: LogbookDb, g: Google, now = new Date(), o: { chunk?: number; onProgress?: (fraction: number) => void } = {}): Promise<{ files: string[] }> {
+  const stillOn = async () => { if (!sourcesOf(await getSettings(db)).drive) throw Object.assign(new Error('Drive backup was switched off, so the upload stopped.'), { name: 'PlainMessage' }); };
+  await stillOn();
+  const month = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`, parent = await folder(g.call);
   const files: [string, Blob][] = [[`logbook-${month}-export.zip`, await makeMarkdownZip(db)], [`logbook-${month}-backup.zip`, await makeBackupZip(db)]];
-  for (const [name, blob] of files) await put(call, parent, name, blob);
+  const total = files.reduce((n, f) => n + f[1].size, 0) || 1; let sent = 0;
+  for (const [name, blob] of files) await put(g, parent, name, blob, o.chunk ?? CHUNK, stillOn, n => { sent += n; o.onProgress?.(Math.min(1, sent / total)); });
   await saveSettings(db, { lastDrive: now.getTime() });
   return { files: files.map(f => f[0]) };
 }
