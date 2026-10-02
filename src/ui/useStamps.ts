@@ -3,6 +3,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db/db';
 import { getSettings } from '../db/actions';
 import { ensureStamps, placesOn } from '../db/stamps';
+import { ensureSong } from '../db/songs';
 import { fetchJson } from '../sources/http';
 import { dayKey } from '../domain/day';
 import { dayPosition, stampList } from '../domain/stamps';
@@ -18,7 +19,7 @@ export function useStamps(day: string) {
   const [status, setStatus] = useState<StampStatus>('loading'), [tick, setTick] = useState(0);
   useEffect(() => {
     let live = true; const run = () => { void refresh(day, tick > 0).then(s => { if (live) setStatus(s); }); };
-    run(); addEventListener('online', run); return () => { live = false; removeEventListener('online', run); };
+    run(); void ensureSong(db, day, new Date(), fetchJson); addEventListener('online', run); return () => { live = false; removeEventListener('online', run); };
   }, [day, tick]);
   const d = useLiveQuery(async () => {
     const [row, settings, people, spans] = await Promise.all([db.days.get(day), getSettings(db), db.people.toArray(), db.spans.toArray()]);

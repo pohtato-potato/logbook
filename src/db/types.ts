@@ -21,7 +21,10 @@ export type Place = { id?: number; name: string; lat?: number; lon?: number; fir
 export type Span = { id?: number; name: string; from: string; to: string; family: Family };
 export type Moment = { id?: number; day: string; at: number; word: string; family: Family; second?: Family; about?: string; strength: number; entryId?: number };
 /* A day's automatic stamps: where the owner said they were, and cached weather and air (final once the day is well over). */
-export type DayStamps = { where?: { lat: number; lon: number }; weather?: { code: number; max: number; min: number; rain: number; final: boolean; at: number; lat?: number; lon?: number }; air?: { aqi?: number; category?: string; lead?: string; none?: boolean; final: boolean; at: number; lat?: number; lon?: number }; pending?: boolean; tried?: { at: number; lat: number; lon: number } };
+export type DayStamps = { where?: { lat: number; lon: number }; weather?: { code: number; max: number; min: number; rain: number; final: boolean; at: number; lat?: number; lon?: number }; air?: { aqi?: number; category?: string; lead?: string; none?: boolean; final: boolean; at: number; lat?: number; lon?: number }; pending?: boolean; tried?: { at: number; lat: number; lon: number }; song?: SongStamp };
+export type SongStamp = { artist: string; track: string; plays: number; final: boolean; at: number };
+/* A finished week's most-played track, Monday to Sunday (plays 0 when nothing was played). */
+export type WeekSong = { week: string; artist: string; track: string; plays: number };
 export type DayRow = { day: string; overall?: { word: string; family: Family; strength: number; set: boolean }; grateful?: string; potd?: number; stamps?: DayStamps; headline?: string };
 export type Person = { id: string; initial: string; name: string; thread: number; birthday?: string };
 export type OwnWord = { word: string; family: Family; created: number };

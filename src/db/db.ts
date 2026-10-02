@@ -1,5 +1,5 @@
 import Dexie, { type Table } from 'dexie';
-import type { DayRow, Entry, Moment, OwnWord, Person, Photo, Place, Settings, Span } from './types';
+import type { DayRow, Entry, Moment, OwnWord, Person, Photo, Place, Settings, Span, WeekSong } from './types';
 
 /* Version 1 holds every table the spec names, so later stages add data, not migrations. */
 export class LogbookDb extends Dexie {
@@ -14,6 +14,7 @@ export class LogbookDb extends Dexie {
   spans!: Table<Span, number>;
   postcards!: Table<{ id: string; app: string; day: string; version: number; data: unknown; receivedAt: number }, string>;
   tags!: Table<{ name: string; created: number }, string>;
+  songs!: Table<WeekSong, string>;
   constructor(name: string) {
     super(name);
     this.version(1).stores({
@@ -31,6 +32,8 @@ export class LogbookDb extends Dexie {
     });
     // Version 2: entries of every kind, found by kind.
     this.version(2).stores({ entries: '++id, day, at, kind, *tags, *people' });
+    // Version 3: songs of the week, from Last.fm.
+    this.version(3).stores({ songs: 'week' });
   }
 }
 export const openDb = (name = 'logbook') => new LogbookDb(name);

@@ -45,6 +45,7 @@ export function stampList(i: { day: string; today: string; stamps?: DayStamps; p
   const far = homeForDistance(i.homes, i.day);
   if (far && i.pos && i.pos.source !== 'home') out.push(['From home', `${Math.round(haversineKm(i.pos.lat, i.pos.lon, far.lat, far.lon))} km from ${far.name}`]);
   const here = homeOn(i.homes, i.day, { current: true }); if (here) out.push(['At this home', `${daysBetween(here.from, i.day) + 1} days`]);
+  const song = i.stamps?.song; if (song && song.plays > 0) out.push(['Playing', `${song.track}, ${song.artist} (${song.plays} ${song.plays === 1 ? 'play' : 'plays'})`]);
   const next = [...i.spans].filter(s => s.from > i.today).sort((x, y) => x.from.localeCompare(y.from))[0];
   if (next && i.day === i.today) out.push(['Next trip', `${next.name}, in ${daysBetween(i.today, next.from)} days`]);
   return out;

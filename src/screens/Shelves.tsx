@@ -3,7 +3,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db/db';
 import { getSettings } from '../db/actions';
 import { loadLookup } from '../db/lookup';
-import type { Entry, Person, Place, Span } from '../db/types';
+import type { Entry, Person, Place, Span, WeekSong } from '../db/types';
 import { dayKey, parseDay } from '../domain/day';
 import { PERSON_THREADS, tagFamily } from '../domain/colour';
 import { ratingText } from '../domain/rating';
@@ -20,11 +20,14 @@ import { useNow } from '../ui/useNow';
 import { go, SHELF_IDS, type ShelfId } from '../router';
 import { nextBirthday } from '../domain/birthday';
 import { maskPrivate } from '../domain/looking';
+import { useEffect } from 'react';
+import { ensureWeeks } from '../db/songs';
+import { fetchJson } from '../sources/http';
 import { usePrivacy } from '../ui/Privacy';
 
-export const SHELF_NAME: Record<ShelfId, string> = { firsts: 'Firsts', media: 'Films, books and shows', quotes: 'Quotes', places: 'Places', keeps: 'Keepsakes', bdays: 'Birthdays and gifts', spans: 'Spans' };
+export const SHELF_NAME: Record<ShelfId, string> = { firsts: 'Firsts', media: 'Films, books and shows', quotes: 'Quotes', places: 'Places', keeps: 'Keepsakes', bdays: 'Birthdays and gifts', songs: 'Songs of the week', spans: 'Spans' };
 const EMPTY: Record<ShelfId, string> = { firsts: 'Firsts appear here when you mark something First.', media: 'Films, books and shows appear here when you keep one from the + button.', quotes: 'Quotes appear here when you keep one from the + button.',
-  places: 'Places appear here when you keep one from the + button.', keeps: 'Keepsakes appear here when you keep one from the + button.', bdays: 'Birthdays come from your private starter file, in Settings.', spans: 'Trips and stretches of days appear here when you keep a span.' };
+  places: 'Places appear here when you keep one from the + button.', keeps: 'Keepsakes appear here when you keep one from the + button.', bdays: 'Birthdays come from your private starter file, in Settings.', songs: 'Songs of the week come from Last.fm, once it is set up in your starter file.', spans: 'Trips and stretches of days appear here when you keep a span.' };
 const short = (d: string) => parseDay(d).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
 const plural = (n: number, one: string, many = one + 's') => `${n} ${n === 1 ? one : many}`;
 const count = (n: number, one: string) => (n ? plural(n, one) : 'None yet');
@@ -42,6 +45,7 @@ export function shelfCounts(entries: Entry[], places: Place[], people: Person[],
     places: places.some(p => p.first) ? `${places.length}, of them ${plural(places.filter(p => p.first).length, 'first')}` : count(places.length, 'place'),
     keeps: count(entries.filter(e => e.kind === 'keep').length, 'keepsake'),
     bdays: bd ? `${bd.p.name}’s ${bd.b!.inDays === 0 ? 'is today' : `in ${plural(bd.b!.inDays, 'day')}`}` : 'None yet',
+    songs: 'Weekly, from Last.fm',
     spans: count(spans.length, 'span'),
   };
 }
@@ -58,7 +62,7 @@ export function ShelvesView({ counts, people, tags }: { counts: Record<ShelfId, 
 }
 const Item = ({ lead, title, sub, right, onOpen }: { lead: ReactNode; title: ReactNode; sub: string; right?: ReactNode; onOpen?(): void }) =>
   <div className="pitem">{lead}<div>{onOpen ? <button type="button" className="linkish" onClick={onOpen}><b>{title}</b></button> : <b>{title}</b>}<span>{sub}</span></div>{right ?? <span />}</div>;
-export type ShelfProps = { shelf: ShelfId; entries: Entry[]; lookup: Lookup; thumbs: Map<number, Blob>; places: Place[]; homes: { lat: number; lon: number }[]; people: Person[]; spans: Span[]; today?: string };
+export type ShelfProps = { songs?: WeekSong[]; shelf: ShelfId; entries: Entry[]; lookup: Lookup; thumbs: Map<number, Blob>; places: Place[]; homes: { lat: number; lon: number }[]; people: Person[]; spans: Span[]; today?: string };
 /* One shelf. Newest first; each item opens its day. */
 export function ShelfView(p: ShelfProps) {
   const look = useLook(), today = p.today ?? dayKey(new Date()), newest = [...p.entries].sort((a, b) => b.day.localeCompare(a.day) || b.at - a.at), open = (d: string) => () => go({ name: 'day', day: d });
@@ -81,6 +85,7 @@ export function ShelfView(p: ShelfProps) {
       const gifts = newest.filter(e => e.marks.gift && e.people.includes(x.initial));
       return <div key={x.id} className="bday"><Face p={x} /><div><b>{x.name}, {parseDay(b!.day).toLocaleDateString('en-GB', { day: 'numeric', month: 'long' })}</b><span>{b!.inDays === 0 ? 'Today!' : `in ${plural(b!.inDays, 'day')}`}</span>
         {gifts.map(g => <p key={g.id} className="gift"><Icon name="gift" />{entryLine(g, p.lookup)}</p>)}</div></div>; }); break;
+    case 'songs': body = (p.songs ?? []).filter(s => s.plays > 0).map(s => <Item key={s.week} lead={<span className="addico" aria-hidden="true"><Icon name="k-media" /></span>} title={s.track} sub={`${s.artist} · week of ${short(s.week)} · ${s.plays} ${s.plays === 1 ? 'play' : 'plays'}`} />); break;
     case 'spans': body = [...p.spans].sort((a, b) => b.from.localeCompare(a.from)).map(s => <Item key={s.id} lead={<span className="spanbar" style={{ background: look.pal[s.family] }} aria-hidden="true" />} title={s.name} sub={`${dateRange(s.from, s.to)} ${s.to.slice(0, 4)} · ${FAMILY_NAME[s.family]}`} onOpen={open(s.from)} />); break;
   }
   return <div className="scr"><div className="content scroll">
@@ -103,10 +108,12 @@ export function Shelves() {
   return d ? <ShelvesView {...d} /> : <div className="scr" />;
 }
 export function Shelf({ shelf }: { shelf: ShelfId }) {
+  useEffect(() => { if (shelf === 'songs') void ensureWeeks(db, new Date(), fetchJson); }, [shelf]);
   const today = dayKey(useNow()), { locked } = usePrivacy();
   const d = useLiveQuery(async () => {
     const [entries, places, people, spans, settings, photos] = await Promise.all([db.entries.toArray(), db.places.toArray(), db.people.toArray(), db.spans.toArray(), getSettings(db), shelf === 'keeps' ? db.photos.toArray() : Promise.resolve([])]);
-    return { entries: maskPrivate(entries, locked), places, people, spans, homes: settings.homes, lookup: await loadLookup(db), thumbs: new Map(photos.map(ph => [ph.id!, ph.thumb])) };
+    const songs = shelf === 'songs' ? await db.songs.orderBy('week').reverse().toArray() : [];
+    return { songs, entries: maskPrivate(entries, locked), places, people, spans, homes: settings.homes, lookup: await loadLookup(db), thumbs: new Map(photos.map(ph => [ph.id!, ph.thumb])) };
   }, [shelf, locked]);
   return d ? <ShelfView shelf={shelf} today={today} {...d} /> : <div className="scr" />;
 }
