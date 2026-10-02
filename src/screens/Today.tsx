@@ -18,6 +18,7 @@ import { FeelingCard, type FeelingSource } from './FeelingCard';
 import { KeptCard } from './KeptCard';
 import { PostcardView } from './Postcard';
 import { driveDue } from '../sources/drive';
+import { chooseFromGooglePhotos, googlePhotosReady } from '../ui/googlePhotos';
 import { syncPostcards, type Postcard } from '../sources/shelf';
 import { addDays } from '../domain/day';
 import { OutsideLine, StampsPanelView, type StampsProps } from './Stamps';
@@ -40,7 +41,7 @@ export { suggestedOverall };
 export { RichText } from './KeptCard';
 export type TodayProps = { now: Date; greeting: string; night: boolean; entries: Entry[]; moments: Moment[]; overall?: DayRow['overall']; suggested?: { word: string; family: Family; strength: number }; grateful?: string; foldedOpen: boolean;
   own?: Record<string, Family>; tagHistory?: Record<string, Family[]>; lookup?: Lookup; thumbs?: Map<number, Blob>;
-  stamps?: StampsProps; onUnlock?(): void; onThisDay?: { year: number; text: string }; postcard?: Postcard; driveDue?: boolean;
+  stamps?: StampsProps; onUnlock?(): void; onThisDay?: { year: number; text: string }; postcard?: Postcard; driveDue?: boolean; onGooglePhotos?(): void;
   photos?: { id: number; thumb: Blob }[]; potd?: number; onPickPhotos?(files: File[]): void; onPotd?(id: number): void; onPhotoMenu?(id: number): void;
   onToggleFold(): void; onConfirmOverall(): void; onChangeOverall(): void; onOpenFeeling(word: string, src: FeelingSource): void; onEntryMenu(id: number): void; writer: ReactNode };
 /* Today. At night (12 to 5 am) it holds only the line, inner weather and the day overall; the rest folds into one row. */
@@ -66,6 +67,7 @@ export function TodayView(p: TodayProps) {
       <p className="hint">Tap a photo to make it the photo of the day. Press and hold one to remove it. Photos stay on your phone.</p></>
       : <p className="hint">None yet. Photos stay on your phone.</p>}
     <button type="button" className="btn wide" onClick={() => pick.current?.click()}><Icon name="photo" />Add from your phone</button>
+    {p.onGooglePhotos && <button type="button" className="btn ghost wide" onClick={p.onGooglePhotos}>Choose from Google Photos</button>}
     <input ref={pick} type="file" accept="image/*" multiple hidden onChange={e => { const fs = [...(e.target.files ?? [])]; e.target.value = ''; if (fs.length) p.onPickPhotos?.(fs); }} /></section>;
   const grateful = <section className="panel"><h2 className="lbl">Grateful for</h2><p className="entry">{p.grateful || <span className="hint">One small thing, when you feel like it.</span>}</p></section>;
   const stampPanel = p.stamps ? <StampsPanelView {...p.stamps} /> : null;
@@ -97,7 +99,7 @@ export function Today() {
   if (!data || needsFirstRun) return <div className="scr" />;
   const suggested = suggestedOverall(data.moments);
   return <>
-    <TodayView now={now} greeting={VOICES[data.settings.voice % VOICES.length].greeting} night={isNight(now)} entries={data.entries} moments={maskMoments(data.moments, data.entries, privacy.locked)} onUnlock={() => void privacy.unlock()} postcard={data.postcard} driveDue={driveDue(data.settings)} onThisDay={data.onThis ? { year: data.onThis.year, text: lineOf(data.onThis.entry, data.lookup ?? NO_LOOKUP) } : undefined} overall={data.row?.overall} suggested={suggested} grateful={data.row?.grateful} own={data.own} tagHistory={data.tagHistory} lookup={data.lookup}
+    <TodayView now={now} greeting={VOICES[data.settings.voice % VOICES.length].greeting} night={isNight(now)} entries={data.entries} moments={maskMoments(data.moments, data.entries, privacy.locked)} onUnlock={() => void privacy.unlock()} postcard={data.postcard} driveDue={driveDue(data.settings)} onGooglePhotos={googlePhotosReady(data.settings) ? async () => { try { const r = await chooseFromGooglePhotos(); if ('undo' in r) undo.show(r.undo, r.message); else undo.fail(Object.assign(new Error(r.message), { name: 'PlainMessage' })); } catch (e) { undo.fail(e); } } : undefined} onThisDay={data.onThis ? { year: data.onThis.year, text: lineOf(data.onThis.entry, data.lookup ?? NO_LOOKUP) } : undefined} overall={data.row?.overall} suggested={suggested} grateful={data.row?.grateful} own={data.own} tagHistory={data.tagHistory} lookup={data.lookup}
       stamps={{ list: st.list, status: st.status, open: stampsOpen, onToggle: () => setStampsOpen(!stampsOpen), canLocate: typeof navigator !== 'undefined' && 'geolocation' in navigator, placeSource: st.pos?.source,
         onWhere: () => navigator.geolocation.getCurrentPosition(async p => { try { undo.show(await addWhereToday(db, day, { lat: roundCoord(p.coords.latitude), lon: roundCoord(p.coords.longitude) }), 'Added where you are today.'); st.refresh(); } catch (e) { undo.fail(e); } },
           () => undo.fail(Object.assign(new Error(data.settings.homes.length ? 'Logbook couldn’t get your position. Weather uses your home instead.' : 'Logbook couldn’t get your position.'), { name: 'PlainMessage' })), { maximumAge: 60_000, timeout: 15_000 }) }}

@@ -15,6 +15,7 @@ import { useNow } from '../../ui/useNow';
 import { KeepFormView, MediaFormView, PastFormView, PersonFormView, PhotoFormView, PlaceFormView, QuoteFormView, SpanFormView,
   type KeepState, type MediaState, type PastState, type PersonState, type PlaceState, type QuoteState, type SpanState } from './index';
 import { VoiceForm } from './VoiceForm';
+import { chooseFromGooglePhotos, googlePhotosReady } from '../../ui/googlePhotos';
 
 /* Each form's state, its save, and the way back to Today with an Undo notice carried across the move. */
 function useForm<T>(start: T) { const [s, set] = useState(start); return [s, (p: Partial<T>) => set(prev => ({ ...prev, ...p }))] as const; }
@@ -29,7 +30,7 @@ function useKeeper() {
 const words = (d: string) => parseDay(d).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
 export function FormScreen({ kind }: { kind: FormKind }) {
   const now = useNow(), keep = useKeeper(), undo = useUndo(), sub = `It lands in today, at ${timeLabel(new Date())}`;
-  const data = useLiveQuery(async () => ({ people: await db.people.toArray(), places: await db.places.toArray(), homes: (await getSettings(db)).homes }), []);
+  const data = useLiveQuery(async () => ({ people: await db.people.toArray(), places: await db.places.toArray(), homes: (await getSettings(db)).homes, google: googlePhotosReady(await getSettings(db)) }), []);
   const [media, setMedia] = useForm<MediaState>({ media: 'Film', title: (() => { try { const t = sessionStorage.getItem('logbook-media-title') ?? ''; sessionStorage.removeItem('logbook-media-title'); return t; } catch { return ''; } })(), rating: 5, current: false, note: '' });
   const [quote, setQuote] = useForm<QuoteState>({ text: '', who: 'Overheard', where: '' });
   const [place, setPlace] = useForm<PlaceState>({ name: '', first: false });
@@ -66,7 +67,7 @@ export function FormScreen({ kind }: { kind: FormKind }) {
         void keep(async () => ({ undo: (await keepSpan(db, span, new Date())).undo, message: `Kept ${span.name.trim()} on the calendar.` })); }} />;
     case 'past': return <PastFormView {...past} today={dayKey(now)} keepSub={past.date ? `It goes on ${words(past.date)}` : 'Choose the date first'} onChange={setPast}
       onKeep={() => keep(entry({ kind: 'past', text: past.text, data: { kind: 'past' }, day: past.date }, `Kept on ${words(past.date)}, written later.`))} />;
-    case 'photo': return <PhotoFormView onPick={async files => { try { const r = await addPhotos(db, files, new Date());
+    case 'photo': return <PhotoFormView onGoogle={data?.google ? async () => { try { const r = await chooseFromGooglePhotos(); if ('undo' in r) { undo.show(r.undo, r.message, { carry: true }); go({ name: 'today' }); } else undo.fail(Object.assign(new Error(r.message), { name: 'PlainMessage' })); } catch (e) { undo.fail(e); } } : undefined} onPick={async files => { try { const r = await addPhotos(db, files, new Date());
       if (r.added) { undo.show(r.undo, photosMessage(r.added, r.failed), { carry: true }); go({ name: 'today' }); } else undo.fail(Object.assign(new Error(photosMessage(0, r.failed)), { name: 'NotAnImageError' })); } catch (e) { undo.fail(e); } }} />;
     case 'voice': return <VoiceForm />;
   }

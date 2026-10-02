@@ -118,10 +118,11 @@ export function PastFormView(p: PastState & Change<PastState> & { today: string;
     <p className="hint">It goes on that date with a “written later” stamp. Logbook can fill in that day’s weather later.</p>
   </FormFrame>;
 }
-export function PhotoFormView({ onPick }: { onPick(files: File[]): void }) {
+export function PhotoFormView({ onPick, onGoogle }: { onPick(files: File[]): void; onGoogle?(): void }) {
   const pick = useRef<HTMLInputElement>(null);
   return <FormFrame title="Photo">
     <button type="button" className="keepslot" onClick={() => pick.current?.click()}><span><Icon name="photo" />Choose from your phone</span></button>
+    {onGoogle && <button type="button" className="btn wide" onClick={onGoogle}>Choose from Google Photos</button>}
     <input ref={pick} type="file" accept="image/*" multiple hidden onChange={e => { const fs = [...(e.target.files ?? [])]; e.target.value = ''; if (fs.length) onPick(fs); }} />
     <p className="hint">Photos are made smaller on your phone and stay there. The first photo of a day becomes its photo of the day.</p>
   </FormFrame>;
