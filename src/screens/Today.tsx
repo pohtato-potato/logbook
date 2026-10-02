@@ -17,6 +17,7 @@ import { LineWriter } from './LineWriter';
 import { FeelingCard, type FeelingSource } from './FeelingCard';
 import { KeptCard } from './KeptCard';
 import { PostcardView } from './Postcard';
+import { driveDue } from '../sources/drive';
 import { syncPostcards, type Postcard } from '../sources/shelf';
 import { addDays } from '../domain/day';
 import { OutsideLine, StampsPanelView, type StampsProps } from './Stamps';
@@ -39,7 +40,7 @@ export { suggestedOverall };
 export { RichText } from './KeptCard';
 export type TodayProps = { now: Date; greeting: string; night: boolean; entries: Entry[]; moments: Moment[]; overall?: DayRow['overall']; suggested?: { word: string; family: Family; strength: number }; grateful?: string; foldedOpen: boolean;
   own?: Record<string, Family>; tagHistory?: Record<string, Family[]>; lookup?: Lookup; thumbs?: Map<number, Blob>;
-  stamps?: StampsProps; onUnlock?(): void; onThisDay?: { year: number; text: string }; postcard?: Postcard;
+  stamps?: StampsProps; onUnlock?(): void; onThisDay?: { year: number; text: string }; postcard?: Postcard; driveDue?: boolean;
   photos?: { id: number; thumb: Blob }[]; potd?: number; onPickPhotos?(files: File[]): void; onPotd?(id: number): void; onPhotoMenu?(id: number): void;
   onToggleFold(): void; onConfirmOverall(): void; onChangeOverall(): void; onOpenFeeling(word: string, src: FeelingSource): void; onEntryMenu(id: number): void; writer: ReactNode };
 /* Today. At night (12 to 5 am) it holds only the line, inner weather and the day overall; the rest folds into one row. */
@@ -68,12 +69,13 @@ export function TodayView(p: TodayProps) {
     <input ref={pick} type="file" accept="image/*" multiple hidden onChange={e => { const fs = [...(e.target.files ?? [])]; e.target.value = ''; if (fs.length) p.onPickPhotos?.(fs); }} /></section>;
   const grateful = <section className="panel"><h2 className="lbl">Grateful for</h2><p className="entry">{p.grateful || <span className="hint">One small thing, when you feel like it.</span>}</p></section>;
   const stampPanel = p.stamps ? <StampsPanelView {...p.stamps} /> : null;
+  const drive = p.driveDue ? <section className="panel"><p className="entry">This month’s Drive backup hasn’t been made yet.</p><button type="button" className="btn wide" onClick={() => go({ name: 'settings' })}>Back it up from Settings</button></section> : null;
   const card = p.postcard ? <PostcardView card={p.postcard} night={p.now.getHours() >= 23 || p.night} /> : null;
   const onThis = p.onThisDay ? <section className="panel"><h2 className="lbl">On this day, {p.onThisDay.year}</h2><p className="entry">{p.onThisDay.text}</p>
     <button type="button" className="btn ghost" onClick={() => go({ name: 'almanac', tab: 'random' })}>Then and now</button></section> : null;
   const sofar = p.foldedOpen ? <>{photoPanel}{card}{stampPanel}{onThis}{grateful}<button type="button" className="btn ghost wide" aria-expanded="true" onClick={p.onToggleFold}><Icon name="up" />Fold away</button></>
     : <button type="button" className="sofar" aria-expanded="false" onClick={p.onToggleFold}><span className="sf-l">Today so far</span><span className="sf-s">{photos.length ? `${photos.length} photo${photos.length === 1 ? '' : 's'} · ` : ''}{p.postcard ? 'yesterday from Health · ' : ''}grateful for{p.stamps ? ' · stamps' : ''}{p.onThisDay ? ' · on this day' : ''}</span><span className="sf-i"><Icon name="down" /></span></button>;
-  return <div className="scr"><div className="content scroll">{header}{p.writer}{kept}{p.night ? null : photoPanel}{weather}{p.night ? null : card}{p.night ? null : stampPanel}{p.night ? null : onThis}{p.night ? sofar : grateful}</div><Tabs current="today" /></div>;
+  return <div className="scr"><div className="content scroll">{header}{p.writer}{kept}{p.night ? null : photoPanel}{weather}{p.night ? null : card}{p.night ? null : stampPanel}{p.night ? null : onThis}{p.night ? sofar : grateful}{p.night ? null : drive}</div><Tabs current="today" /></div>;
 }
 const skippedFirstRun = () => { try { return !!localStorage.getItem('logbook-first-run-skipped'); } catch { return false; } };
 export function Today() {
@@ -95,7 +97,7 @@ export function Today() {
   if (!data || needsFirstRun) return <div className="scr" />;
   const suggested = suggestedOverall(data.moments);
   return <>
-    <TodayView now={now} greeting={VOICES[data.settings.voice % VOICES.length].greeting} night={isNight(now)} entries={data.entries} moments={maskMoments(data.moments, data.entries, privacy.locked)} onUnlock={() => void privacy.unlock()} postcard={data.postcard} onThisDay={data.onThis ? { year: data.onThis.year, text: lineOf(data.onThis.entry, data.lookup ?? NO_LOOKUP) } : undefined} overall={data.row?.overall} suggested={suggested} grateful={data.row?.grateful} own={data.own} tagHistory={data.tagHistory} lookup={data.lookup}
+    <TodayView now={now} greeting={VOICES[data.settings.voice % VOICES.length].greeting} night={isNight(now)} entries={data.entries} moments={maskMoments(data.moments, data.entries, privacy.locked)} onUnlock={() => void privacy.unlock()} postcard={data.postcard} driveDue={driveDue(data.settings)} onThisDay={data.onThis ? { year: data.onThis.year, text: lineOf(data.onThis.entry, data.lookup ?? NO_LOOKUP) } : undefined} overall={data.row?.overall} suggested={suggested} grateful={data.row?.grateful} own={data.own} tagHistory={data.tagHistory} lookup={data.lookup}
       stamps={{ list: st.list, status: st.status, open: stampsOpen, onToggle: () => setStampsOpen(!stampsOpen), canLocate: typeof navigator !== 'undefined' && 'geolocation' in navigator, placeSource: st.pos?.source,
         onWhere: () => navigator.geolocation.getCurrentPosition(async p => { try { undo.show(await addWhereToday(db, day, { lat: roundCoord(p.coords.latitude), lon: roundCoord(p.coords.longitude) }), 'Added where you are today.'); st.refresh(); } catch (e) { undo.fail(e); } },
           () => undo.fail(Object.assign(new Error(data.settings.homes.length ? 'Logbook couldn’t get your position. Weather uses your home instead.' : 'Logbook couldn’t get your position.'), { name: 'PlainMessage' })), { maximumAge: 60_000, timeout: 15_000 }) }}

@@ -31,5 +31,5 @@ export type OwnWord = { word: string; family: Family; created: number };
 export type Sources = { weather: boolean; places: boolean; songs?: boolean; drive?: boolean; photos?: boolean };
 /* What the private starter file brings for the linked sources. Never in the repo. */
 export type Links = { lastfm: string[]; lastfmKey?: string; googleClientId?: string };
-export type Settings = { id: 'main'; voice: number; dayStyle: 'bloom' | 'score'; theme: 'dark' | 'light'; motion: 'still' | 'gentle' | 'lively'; homes: { name: string; lat: number; lon: number; from: string; to?: string }[]; starterLoaded: boolean; lastExport?: number; sources?: Sources; links?: Links; lock?: { credentialId: string; createdAt: number; userId?: string } };
+export type Settings = { id: 'main'; voice: number; dayStyle: 'bloom' | 'score'; theme: 'dark' | 'light'; motion: 'still' | 'gentle' | 'lively'; homes: { name: string; lat: number; lon: number; from: string; to?: string }[]; starterLoaded: boolean; lastExport?: number; lastDrive?: number; sources?: Sources; links?: Links; lock?: { credentialId: string; createdAt: number; userId?: string } };
 export const DEFAULT_SETTINGS: Settings = { id: 'main', voice: 0, dayStyle: 'bloom', theme: 'dark', motion: 'gentle', homes: [], starterLoaded: false };
