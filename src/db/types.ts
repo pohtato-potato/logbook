@@ -25,5 +25,8 @@ export type DayStamps = { where?: { lat: number; lon: number }; weather?: { code
 export type DayRow = { day: string; overall?: { word: string; family: Family; strength: number; set: boolean }; grateful?: string; potd?: number; stamps?: DayStamps; headline?: string };
 export type Person = { id: string; initial: string; name: string; thread: number; birthday?: string };
 export type OwnWord = { word: string; family: Family; created: number };
-export type Settings = { id: 'main'; voice: number; dayStyle: 'bloom' | 'score'; theme: 'dark' | 'light'; motion: 'still' | 'gentle' | 'lively'; homes: { name: string; lat: number; lon: number; from: string; to?: string }[]; starterLoaded: boolean; lastExport?: number; sources?: { weather: boolean; places: boolean }; lock?: { credentialId: string; createdAt: number; userId?: string } };
+export type Sources = { weather: boolean; places: boolean; songs?: boolean; drive?: boolean; photos?: boolean };
+/* What the private starter file brings for the linked sources. Never in the repo. */
+export type Links = { lastfm: string[]; lastfmKey?: string; googleClientId?: string };
+export type Settings = { id: 'main'; voice: number; dayStyle: 'bloom' | 'score'; theme: 'dark' | 'light'; motion: 'still' | 'gentle' | 'lively'; homes: { name: string; lat: number; lon: number; from: string; to?: string }[]; starterLoaded: boolean; lastExport?: number; sources?: Sources; links?: Links; lock?: { credentialId: string; createdAt: number; userId?: string } };
 export const DEFAULT_SETTINGS: Settings = { id: 'main', voice: 0, dayStyle: 'bloom', theme: 'dark', motion: 'gentle', homes: [], starterLoaded: false };

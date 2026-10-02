@@ -23,12 +23,13 @@ export async function saveFile(blob: Blob, name: string): Promise<boolean> {
 const pick = <T extends string | number,>(label: string, options: [T, string][], cur: T, on: (v: T) => void) =>
   <div className="chips" role="group" aria-label={label}>{options.map(([v, l]) => <button key={String(v)} type="button" className={'chip' + (v === cur ? ' on ink' : '')} aria-pressed={v === cur} onClick={() => on(v)}>{l}</button>)}</div>;
 const Row = ({ title, sub, children }: { title: string; sub: string; children?: ReactNode }) => <div className="setrow"><div><b>{title}</b><span>{sub}</span></div>{children}</div>;
-export type SettingsProps = { settings: S; message: string; onVoice(i: number): void; onDayStyle(s: S['dayStyle']): void; onTheme(t: S['theme']): void; onMotion(m: S['motion']): void; onExport(): void; onBackup(): void; onRestore(f: File): void; onStarter(f: File): void; onSource?(key: 'weather' | 'places', on: boolean): void; lockSupported?: boolean | null; onLock?(on: boolean): void; onResetLock?(): void };
+export type SettingsProps = { settings: S; message: string; onVoice(i: number): void; onDayStyle(s: S['dayStyle']): void; onTheme(t: S['theme']): void; onMotion(m: S['motion']): void; onExport(): void; onBackup(): void; onRestore(f: File): void; onStarter(f: File): void; onSource?(key: 'weather' | 'places' | 'songs' | 'drive' | 'photos', on: boolean): void; lockSupported?: boolean | null; onLock?(on: boolean): void; onResetLock?(): void };
 const monthYear = (d: string) => parseDay(d).toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
 const Switch = ({ on, label, onFlip }: { on: boolean; label: string; onFlip(): void }) =>
   <button type="button" role="switch" aria-checked={on} aria-label={label} className={'btn sm' + (on ? ' primary' : '')} onClick={onFlip}>{on ? 'On' : 'Off'}</button>;
 export function SettingsView(p: SettingsProps) {
-  const restore = useRef<HTMLInputElement>(null), starter = useRef<HTMLInputElement>(null), s = p.settings;
+  const restore = useRef<HTMLInputElement>(null), starter = useRef<HTMLInputElement>(null), s = p.settings, sources = sourcesOf(s), links = s.links ?? { lastfm: [] };
+  const lastfmReady = !!links.lastfmKey && links.lastfm.length > 0, googleReady = !!links.googleClientId;
   return <div className="scr"><div className="content scroll">
     <header className="thead"><h1 className="tdate sm">Settings</h1></header>
     {p.message && <p className="panel entry" role="alert">{p.message}</p>}
@@ -55,6 +56,11 @@ export function SettingsView(p: SettingsProps) {
       <Row title="Weather and air" sub="From Open-Meteo. Sends the day’s rough position (about 1 km), nothing else."><Switch on={sourcesOf(s).weather} label="Weather and air" onFlip={() => p.onSource?.('weather', !sourcesOf(s).weather)} /></Row>
       <Row title="Place names" sub="From OpenStreetMap, only when you tap Suggest. Sends where you are (about 100 m)."><Switch on={sourcesOf(s).places} label="Place names" onFlip={() => p.onSource?.('places', !sourcesOf(s).places)} /></Row>
       <p className="hint">Sunrise, sunset and the moon are worked out on your phone. Nothing else leaves it.</p></section>
+    <section className="panel"><h2 className="lbl">Linked sources</h2>
+      <Row title="Health postcards" sub="From the Health app on this phone, the afternoon after each day. Nothing leaves the phone." />
+      <Row title="Songs" sub={lastfmReady ? `From Last.fm. Set up for ${links.lastfm.join(' and ')}.` : 'Not set up: needs a Last.fm key and username in your starter file.'}>{lastfmReady && <Switch on={sources.songs} label="Songs" onFlip={() => p.onSource?.('songs', !sources.songs)} />}</Row>
+      <Row title="Drive backup" sub={googleReady ? 'A monthly copy of your export and backup, in a Logbook folder on your Google Drive.' : 'Not set up: needs a Google client ID in your starter file.'}>{googleReady && <Switch on={sources.drive} label="Drive backup" onFlip={() => p.onSource?.('drive', !sources.drive)} />}</Row>
+      <Row title="Google Photos" sub={googleReady ? 'Choose today’s photos from Google Photos, only when you ask.' : 'Not set up: needs a Google client ID in your starter file.'}>{googleReady && <Switch on={sources.photos} label="Google Photos" onFlip={() => p.onSource?.('photos', !sources.photos)} />}</Row></section>
     <section className="panel"><h2 className="lbl">Your homes</h2>
       {s.homes.length ? [...s.homes].sort((a, b) => b.from.localeCompare(a.from)).map(h => <Row key={h.name + h.from} title={h.name} sub={h.to ? `${monthYear(h.from)} to ${monthYear(h.to)}` : `Since ${monthYear(h.from)}, now`} />)
         : <p className="hint">Homes come from your private starter file. They give each day its weather and the distance from home.</p>}</section>
