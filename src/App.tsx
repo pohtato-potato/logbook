@@ -26,6 +26,7 @@ import { Desk } from './screens/Desk';
 import { useWide } from './ui/useWide';
 import { useKeys } from './ui/keys';
 import { PrivacyProvider } from './ui/Privacy';
+import { UpdateNotice } from './pwa';
 
 /* The Undo notice belongs to the screen it was shown on: moving to another screen clears it. */
 function ClearUndoOnMove({ at }: { at: string }) { const { moved } = useUndo(); useEffect(() => { moved(); }, [at, moved]); return null; }
@@ -59,5 +60,6 @@ export function App() {
     {r.name === 'share' && <ShareSheet />}
     {r.name === 'settings' && <Settings />}
     {r.name === 'first-run' && <FirstRun />}
+    <UpdateNotice />
   </PrivacyProvider></UndoProvider></LookProvider></div>;
 }

@@ -17,3 +17,4 @@
 .tlprev p{margin:0 0 8px}
 .tlbtns{display:flex; flex-wrap:wrap; gap:10px; margin-top:6px}
 .tlbtns .btn{min-height:44px}
+.toast.update{top:calc(env(safe-area-inset-top) + 10px); bottom:auto}

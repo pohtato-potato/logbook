@@ -1,7 +1,7 @@
 import type { DayRow, Entry, Moment, Person, Place } from '../db/types';
 import { FAMILIES, FAMILY_NAME, type Family } from '../vocab/vocab';
 import { addDays, parseDay, weekStartOf } from './day';
-import { EMPTY_LOOKUP, entryLine } from './entryText';
+import { EMPTY_LOOKUP, entryLine, type Lookup } from './entryText';
 import { wordCounts } from './looking';
 
 /* The Almanac's words and numbers. It describes what was; it never ranks, judges or predicts. Callers pass entries and moments already masked for privacy. */
@@ -13,10 +13,12 @@ const top = <K,>(xs: K[], k = 1) => [...count(xs)].sort((a, b) => b[1] - a[1]).s
 const topFams = (fs: Family[], k: number) => { const n = count(fs); return [...FAMILIES].filter(f => n.get(f)).sort((a, b) => n.get(b)! - n.get(a)!).slice(0, k); };
 const plural = (n: number, one: string, many = one + 's') => `${n} ${n === 1 ? one : many}`;
 const dm = (d: string) => parseDay(d).toLocaleDateString('en-GB', { day: 'numeric', month: 'long' });
+/* Visits imported from Timeline sit on their days, but a day counts as kept only for what the owner kept themselves. */
+export const byOwner = (e: Entry) => e.source !== 'timeline';
 const quietIds = (entries: Entry[]) => new Set(entries.filter(e => e.marks.quiet).map(e => e.id));
 
 export type Report = { headline: string; numbers: { n: number; label: string; sub: string }[]; notable: { n: string; text: string; first?: boolean }[] };
-export function yearReport(year: number, d: { entries: Entry[]; moments: Moment[]; rows: DayRow[]; places: Place[]; people: Person[] }): Report {
+export function yearReport(year: number, d: { entries: Entry[]; moments: Moment[]; rows: DayRow[]; places: Place[]; people: Person[]; lookup?: Lookup }): Report {
   const y = String(year), ms = d.moments.filter(m => m.day.startsWith(y)), es = d.entries.filter(e => e.day.startsWith(y));
   if (!ms.length && !es.length) return { headline: 'Nothing kept this year yet.', numbers: [], notable: [] };
   const fams = topFams(ms.map(m => m.family), 2);
@@ -24,7 +26,7 @@ export function yearReport(year: number, d: { entries: Entry[]; moments: Moment[
   const headline = fams.length > 1 ? `A ${lower(fams[0])} year, with ${lower(fams[1])} in ${peak(fams[1])}.` : fams.length ? `A ${lower(fams[0])} year so far.` : 'A year of lines so far.';
   const numbers: Report['numbers'] = [];
   if (ms.length) numbers.push({ n: ms.length, label: 'feelings named', sub: plural(new Set(ms.map(m => m.family)).size, 'family', 'families') });
-  const days = new Set([...ms.map(m => m.day), ...es.map(e => e.day)]);
+  const days = new Set([...ms.map(m => m.day), ...es.filter(byOwner).map(e => e.day)]);
   numbers.push({ n: days.size, label: days.size === 1 ? 'day kept' : 'days kept', sub: plural(ms.length, 'moment') });
   const visits = es.filter(e => e.data?.kind === 'place'), placeIds = new Set(visits.map(e => (e.data as { placeId: number }).placeId));
   if (placeIds.size) { const firsts = visits.filter(e => (e.data as { first: boolean }).first).length; numbers.push({ n: placeIds.size, label: placeIds.size === 1 ? 'place' : 'places', sub: firsts ? `${firsts} ${firsts === 1 ? 'was a first' : 'were firsts'}` : 'all ones you knew' }); }
@@ -42,7 +44,7 @@ export function yearReport(year: number, d: { entries: Entry[]; moments: Moment[
   const [word] = wordCounts(ms);
   if (word && word[1].n >= 2) notable.push({ n: String(word[1].n), text: `times you named ${word[0]}, more than any other word` });
   const first = [...es].filter(e => e.marks.first && !e.marks.quiet).sort((a, b) => b.day.localeCompare(a.day) || b.at - a.at)[0];
-  if (first) notable.push({ n: '', first: true, text: `the day you marked to keep: ${dm(first.day)}, ${entryLine(first, EMPTY_LOOKUP).replace(/\.$/, '')}` });
+  if (first) notable.push({ n: '', first: true, text: `the day you marked to keep: ${dm(first.day)}, ${entryLine(first, d.lookup ?? EMPTY_LOOKUP).replace(/\.$/, '')}` });
   return { headline, numbers, notable };
 }
 /* Weeks run Monday to Sunday; a late-night line already belongs to the day before (the 4 am rule). */
@@ -69,7 +71,7 @@ export function monthLines(year: number, entries: Entry[], moments: Moment[], to
 /* On this day, in earlier years: one entry a year (its first), newest year first. "Don't bring back" stays out. */
 export function onThisDay(entries: Entry[], today: string): { year: number; entry: Entry }[] {
   const md = today.slice(5), y = Number(today.slice(0, 4)), by = new Map<number, Entry>();
-  [...entries].filter(e => !e.marks.quiet && e.day.slice(5) === md && Number(e.day.slice(0, 4)) < y).sort((a, b) => a.at - b.at).forEach(e => { const yr = Number(e.day.slice(0, 4)); if (!by.has(yr)) by.set(yr, e); });
+  [...entries].filter(e => !e.marks.quiet && byOwner(e) && e.day.slice(5) === md && Number(e.day.slice(0, 4)) < y).sort((a, b) => a.at - b.at).forEach(e => { const yr = Number(e.day.slice(0, 4)); if (!by.has(yr)) by.set(yr, e); });
   return [...by].sort((a, b) => b[0] - a[0]).map(([year, entry]) => ({ year, entry }));
 }
 export function randomDay(days: string[], rand: () => number, exclude: Set<string>): string | null {

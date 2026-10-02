@@ -1,3 +1,4 @@
+import { byOwner } from '../domain/almanac';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { useState, type ReactNode } from 'react';
 import { db } from '../db/db';
@@ -46,7 +47,7 @@ export function CalendarView({ month, today, days, spans = [], open, onOpen, onM
     if (!d) return <span key={'b' + i} className="mc blank" />;
     const n = +d.slice(8), info = days[d], sp = spanOf(d), inspan = sp ? ' inspan' : '';
     if (!info) return <span key={d} className={'mc' + inspan + (d > today ? ' future' : '') + (d === today ? ' today' : '')} style={band(sp)}><span className="dn">{n}</span></span>;
-    const label = info.family ? `${dateWords(d)}: mostly ${FAMILY_NAME[info.family].toLowerCase()}, ${info.count} moment${info.count === 1 ? '' : 's'}${info.first ? ', a first' : ''}` : `${dateWords(d)}: lines kept, no feelings named${info.first ? ', a first' : ''}`;
+    const label = info.family ? `${dateWords(d)}: mostly ${FAMILY_NAME[info.family].toLowerCase()}, ${info.count} moment${info.count === 1 ? '' : 's'}${info.first ? ', a first' : ''}` : `${dateWords(d)}: kept, no feelings named${info.first ? ', a first' : ''}`;
     const said = label + (sp ? `, part of ${sp.name}` : '');
     return <button key={d} type="button" className={'mc' + inspan + (d === today ? ' today' : '')} style={band(sp)} aria-label={said} onClick={() => onOpen(d)}>
       <span className="dn">{n}</span>{info.family ? <Glyph family={info.family} label="" /> : <span className="lineonly" aria-hidden="true" />}{info.first && <span className="mk"><Icon name="first" /></span>}</button>;
@@ -69,7 +70,7 @@ export function CalendarView({ month, today, days, spans = [], open, onOpen, onM
   </div>
   {open && days[open] && <Sheet label={dateWords(open)} onClose={() => onOpen(null)}>
     <div className="row3"><p className="tdate sm">{dateWords(open)}</p><button type="button" className="iconbtn" aria-label="Close" onClick={() => onOpen(null)}><Icon name="close" /></button></div>
-    <p className="entry">{days[open].family ? `Mostly ${FAMILY_NAME[days[open].family!].toLowerCase()}, ${days[open].count} moment${days[open].count === 1 ? '' : 's'}${days[open].first ? ', and a first' : ''}.` : `Lines kept, no feelings named${days[open].first ? ', and a first' : ''}.`}</p>
+    <p className="entry">{days[open].family ? `Mostly ${FAMILY_NAME[days[open].family!].toLowerCase()}, ${days[open].count} moment${days[open].count === 1 ? '' : 's'}${days[open].first ? ', and a first' : ''}.` : `Kept, no feelings named${days[open].first ? ', and a first' : ''}.`}</p>
     <div className="btnrow">{prev && <button type="button" className="btn" aria-label={`Day before, ${dateWords(prev)}`} onClick={() => onOpen(prev)}><Icon name="back" />{short(prev)}</button>}
       <button type="button" className="btn primary" onClick={() => go({ name: 'day', day: open })}>Open this day</button>
       {next && <button type="button" className="btn" aria-label={`Day after, ${dateWords(next)}`} onClick={() => onOpen(next)}>{short(next)}<Icon name="next" /></button>}</div>
@@ -82,7 +83,7 @@ export function Calendar({ month, tab = 'days' }: { month?: string; tab?: CalTab
   const { days, spans } = useLiveQuery(async () => {
     const first = m + '-01', last = m + '-31';
     const [moments, entries, rows] = await Promise.all([db.moments.where('day').between(first, last, true, true).toArray(), db.entries.where('day').between(first, last, true, true).toArray(), db.days.where('day').between(first, last, true, true).toArray()]);
-    return { days: buildMonthDays(moments, entries, rows), spans: (await db.spans.toArray()).filter(sp => sp.from <= last && sp.to >= first).sort((a, b) => a.from.localeCompare(b.from)) };
+    return { days: buildMonthDays(moments, entries.filter(byOwner), rows), spans: (await db.spans.toArray()).filter(sp => sp.from <= last && sp.to >= first).sort((a, b) => a.from.localeCompare(b.from)) };
   }, [m]) ?? { days: {}, spans: [] };
   return <CalendarView month={m} today={today} days={days} spans={spans} open={open} onOpen={setOpen} onMonth={mm => go({ name: 'cal', month: mm, tab })} tab={tab}>
     {tab === 'year' ? <Year year={Number(m.slice(0, 4))} today={today} locked={locked} /> : tab === 'gallery' ? <Gallery month={m} today={today} /> : tab === 'life' ? <Life locked={locked} /> : <Feelings month={m} locked={locked} />}</CalendarView>;

@@ -7,6 +7,7 @@ import '@fontsource-variable/archivo/wdth.css';
 import { App } from './App';
 import { consumeShare } from './share';
 import { handleAuthReturn } from './sources/google';
+import { initPwa } from './pwa';
 if (!handleAuthReturn()) consumeShare();
 import './styles/tokens.css';
 import './styles/app.css';
@@ -20,4 +21,5 @@ import './styles/app-extra.css';
 // Ask the browser not to clear Logbook's storage under pressure. It's fine if it says no.
 if (navigator.storage && navigator.storage.persist) void navigator.storage.persist();
 
+void initPwa();
 createRoot(document.getElementById('root')!).render(<StrictMode><App /></StrictMode>);

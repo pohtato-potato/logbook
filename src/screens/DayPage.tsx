@@ -58,7 +58,10 @@ export function DayPageView({ day, style, entries, moments, overall, own, lookup
   </div><Tabs current="cal" /></div>;
 }
 /* Each moment's echo: the latest earlier day with the same feeling. Private feelings (while locked) get none. */
-const echoesOf = (ms: Moment[], all: Moment[], entries: Entry[]) => new Map(ms.filter(m => m.word !== PRIVATE_FEELING).flatMap(m => { const e = echoFor(m, all, entries); return e ? [[m.id!, e] as const] : []; }));
+export function echoesOf(today: Moment[], all: Moment[], entries: Entry[], locked: boolean) {
+  const ms = maskMoments(today, entries, locked), earlier = maskMoments(all, entries, locked); // a private feeling becomes PRIVATE_FEELING on both sides, so it never matches
+  return new Map(ms.filter(m => m.word !== PRIVATE_FEELING).flatMap(m => { const e = echoFor(m, earlier, entries); return e ? [[m.id!, e] as const] : []; }));
+}
 export function DayPage({ day }: { day: string }) {
   const { locked } = usePrivacy();
   const [card, setCard] = useState<{ word: string; id: number } | null>(null), [menu, setMenu] = useState<number | null>(null), [open, setOpen] = useState(false), st = useStamps(day);
@@ -69,7 +72,7 @@ export function DayPage({ day }: { day: string }) {
     thumbs: new Map((await db.photos.where('day').equals(day).toArray()).map(ph => [ph.id!, ph.thumb])),
   }), [day]);
   if (!data) return <div className="scr" />;
-  return <><DayPageView day={day} style={data.settings.dayStyle} entries={data.entries} moments={maskMoments(data.moments, data.entries, locked)} echoes={echoesOf(maskMoments(data.moments, data.entries, locked), data.all, data.allEntries)} overall={data.row?.overall} own={data.own} lookup={data.lookup} thumbs={data.thumbs} onOpenFeeling={(word, id) => setCard({ word, id })} onEntryMenu={setMenu}
+  return <><DayPageView day={day} style={data.settings.dayStyle} entries={data.entries} moments={maskMoments(data.moments, data.entries, locked)} echoes={echoesOf(data.moments, data.all, [...data.entries, ...data.allEntries], locked)} overall={data.row?.overall} own={data.own} lookup={data.lookup} thumbs={data.thumbs} onOpenFeeling={(word, id) => setCard({ word, id })} onEntryMenu={setMenu}
       stamps={{ list: st.list, status: st.status, open, onToggle: () => setOpen(!open), onWhere: () => {}, canLocate: false, placeSource: st.pos?.source, isToday: false }} />
     {menu != null && <EntryMenu id={menu} onClose={() => setMenu(null)} />}
     {card && <FeelingCard word={card.word} src={{ kind: 'entry', id: card.id }} own={data.own} onClose={() => setCard(null)} />}</>;

@@ -51,7 +51,7 @@ describe('review fix 5: days with lines but no feelings still show and open', ()
     const days = buildMonthDays([], [{ day: '2026-09-12', marks: { first: true } }], []);
     expect(days['2026-09-12']).toEqual({ count: 0, first: true });
     const html = renderToStaticMarkup(<CalendarView month="2026-09" today="2026-09-29" days={days} open={null} onOpen={noop} onMonth={noop} />);
-    expect(html).toContain('aria-label="12 September: lines kept, no feelings named, a first"');
+    expect(html).toContain('aria-label="12 September: kept, no feelings named, a first"');
     expect(html).not.toContain('Nothing kept this month yet');
   });
 });

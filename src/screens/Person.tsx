@@ -16,6 +16,7 @@ import { useUndo } from '../ui/Undo';
 import { go } from '../router';
 import { KeptCard } from './KeptCard';
 import { usePrivacy } from '../ui/Privacy';
+import { openTo } from '../domain/looking';
 
 export type PersonFilter = 'all' | 'events' | 'feelings';
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
@@ -45,8 +46,8 @@ export function Person({ id }: { id: string }) {
   const d = useLiveQuery(async () => {
     const person = (await db.people.get(id)) ?? (await db.people.toArray()).find(p => p.initial.toLowerCase() === id.toLowerCase());
     if (!person) return { person: null, entries: [] as Entry[], lookup: null };
-    return { person, entries: await db.entries.where('people').equals(person.initial).toArray(), lookup: await loadLookup(db) };
-  }, [id]);
+    return { person, entries: openTo(await db.entries.where('people').equals(person.initial).toArray(), locked), lookup: await loadLookup(db) };
+  }, [id, locked]);
   if (!d) return <div className="scr" />;
   if (!d.person || !d.lookup) return <div className="scr"><div className="content scroll"><header className="thead row2"><Back /><h1 className="tdate sm">Person</h1></header>
     <p className="entry">This person isn’t in Logbook. People come from your private starter file, in Settings.</p></div><Tabs current="shelves" /></div>;

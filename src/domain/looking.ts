@@ -1,7 +1,7 @@
 import type { DayRow, Entry, Moment, Person, Span } from '../db/types';
 import { FAMILIES, FAMILY_NAME, feelingOf, type Family } from '../vocab/vocab';
 import { addDays } from './day';
-import { dateRange, entryLine, type Lookup } from './entryText';
+import { PRIVATE_TEXT, dateRange, entryLine, type Lookup } from './entryText';
 import type { Home } from './stamps';
 
 /* Looking back, as plain numbers and sentences. Everything here describes; nothing ranks or judges. */
@@ -10,7 +10,7 @@ const name = (f: Family) => FAMILY_NAME[f].toLowerCase();
 const tally = <K,>(xs: K[]) => { const n = new Map<K, number>(); xs.forEach(x => n.set(x, (n.get(x) ?? 0) + 1)); return n; };
 /* Most frequent first; ties keep the order of FAMILIES. */
 const topFamilies = (fs: Family[], k: number) => { const n = tally(fs); return [...FAMILIES].filter(f => n.get(f)).sort((a, b) => n.get(b)! - n.get(a)!).slice(0, k); };
-export const PRIVATE_TEXT = 'A private entry. Unlock to read.';
+export { PRIVATE_TEXT };
 
 /* The day overall, suggested from the most-felt family and its latest word, until it's set. */
 export function suggestedOverall(moments: Moment[]) {
@@ -53,7 +53,7 @@ export function monthSummary(s: { counts: Record<Family, number>; top: Family[] 
 export function wordCounts(moments: Moment[]): [string, { family: Family; n: number }][] {
   const c = new Map<string, { family: Family; n: number }>();
   const add = (w: string, fam: Family) => { const k = w.trim().toLowerCase(); if (!k) return; const x = c.get(k); c.set(k, { family: x?.family ?? fam, n: (x?.n ?? 0) + 1 }); };
-  moments.forEach(m => { add(m.word, m.family); (m.about?.replace(/^then /, '').split(', ') ?? []).forEach(w => add(w, feelingOf(w, {})?.family ?? m.family)); });
+  moments.forEach(m => { if (m.word === PRIVATE_FEELING) return; add(m.word, m.family); (m.about?.replace(/^then /, '').split(', ') ?? []).forEach(w => add(w, feelingOf(w, {})?.family ?? m.family)); });
   return [...c].sort((a, b) => b[1].n - a[1].n || a[0].localeCompare(b[0])).slice(0, 10);
 }
 /* The 24 clock hours (local time, 0–23), each with its feelings as shares of that hour. */
@@ -103,10 +103,12 @@ export function maskPrivate(entries: Entry[], locked: boolean): Entry[] {
   if (!locked) return entries;
   return entries.map(e => {
     if (!e.marks.priv) return e;
-    const d = e.data, data: Entry['data'] = !d ? d : d.kind === 'media' ? { ...d, title: PRIVATE_TEXT } : d.kind === 'quote' ? { kind: 'quote', who: d.who } : d.kind === 'keep' ? { kind: 'keep' } : d.kind === 'voice' ? { ...d, audio: new Blob() } : d;
-    return { ...e, text: PRIVATE_TEXT, tags: [], data };
+    const d = e.data, data: Entry['data'] = !d ? d : d.kind === 'media' ? { ...d, title: PRIVATE_TEXT } : d.kind === 'quote' ? { kind: 'quote', who: d.who } : d.kind === 'keep' ? { kind: 'keep' } : d.kind === 'voice' ? { ...d, audio: new Blob() } : d.kind === 'link' ? { kind: 'link', url: '' } : d.kind === 'person' ? { ...d, who: [] } : d;
+    return { ...e, text: PRIVATE_TEXT, tags: [], people: [], data };
   });
 }
+/* While locked, private entries are left out of anything that counts or lists people, places or days. */
+export const openTo = (entries: Entry[], locked: boolean) => (locked ? entries.filter(e => !e.marks.priv) : entries);
 /* While locked, a feeling from a private line keeps its form (so the day's shape stays honest) but not its words. */
 export const PRIVATE_FEELING = 'a private feeling';
 export function maskMoments(moments: Moment[], entries: Entry[], locked: boolean): Moment[] {

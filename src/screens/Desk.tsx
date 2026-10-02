@@ -4,7 +4,8 @@ import { db } from '../db/db';
 import { PERSON_THREADS } from '../domain/colour';
 import { dayKey, parseDay } from '../domain/day';
 import { dateRange } from '../domain/entryText';
-import { dayFamilies } from '../domain/looking';
+import { dayFamilies, openTo } from '../domain/looking';
+import { usePrivacy } from '../ui/Privacy';
 import { drawSmall } from '../draw/forms';
 import { Scene } from '../draw/Canvas';
 import { FAMILY_NAME, type Family } from '../vocab/vocab';
@@ -47,8 +48,8 @@ function Left({ route, day }: { route: Route; day: string }) {
   </>;
 }
 function Right({ day }: { day: string }) {
-  const st = useStamps(day);
-  const people = useLiveQuery(async () => { const inits = new Set((await db.entries.where('day').equals(day).toArray()).flatMap(e => e.people)); return (await db.people.toArray()).filter(p => inits.has(p.initial)); }, [day]) ?? [];
+  const st = useStamps(day), { locked } = usePrivacy();
+  const people = useLiveQuery(async () => { const inits = new Set(openTo(await db.entries.where('day').equals(day).toArray(), locked).flatMap(e => e.people)); return (await db.people.toArray()).filter(p => inits.has(p.initial)); }, [day, locked]) ?? [];
   return <>
     <h2 className="lbl">{day === dayKey(new Date()) ? 'Today’s stamps' : 'The day’s stamps'}</h2>
     {st.list.length ? <div className="stamps one">{st.list.slice(0, 6).map(([k, v]) => <p key={k} className="stamp"><b>{k}</b>{v}</p>)}</div> : <p className="hint">No stamps yet.</p>}

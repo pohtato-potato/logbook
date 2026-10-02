@@ -1,7 +1,7 @@
 import type { Entry, Moment, Person } from '../db/types';
 import { contrast, mix, onColor, solid } from '../domain/colour';
 import { parseDay } from '../domain/day';
-import { EMPTY_LOOKUP, entryLine } from '../domain/entryText';
+import { EMPTY_LOOKUP, entryLine, type Lookup } from '../domain/entryText';
 import { wordCounts } from '../domain/looking';
 import { FAMILIES, FAMILY_NAME, type Family } from '../vocab/vocab';
 import { drawForm, type Look } from './forms';
@@ -10,7 +10,7 @@ export type Card = { kind: 'mostly' | 'firsts' | 'words' | 'people'; title: stri
 const count = <K,>(xs: K[]) => { const n = new Map<K, number>(); xs.forEach(x => n.set(x, (n.get(x) ?? 0) + 1)); return n; };
 const lower = (f: Family) => FAMILY_NAME[f].toLowerCase();
 /* The month as a few cards, only where there is something true to say. "Don't bring back" stays out (spec, section 6). */
-export function wrappedCards(month: string, entries: Entry[], moments: Moment[], people: Person[] = []): Card[] {
+export function wrappedCards(month: string, entries: Entry[], moments: Moment[], people: Person[] = [], lookup: Lookup = EMPTY_LOOKUP): Card[] {
   const quiet = new Set(entries.filter(e => e.marks.quiet).map(e => e.id));
   const es = entries.filter(e => e.day.startsWith(month) && !e.marks.quiet), ms = moments.filter(m => m.day.startsWith(month) && !(m.entryId != null && quiet.has(m.entryId)));
   const n = count(ms.map(m => m.family)), fams = [...FAMILIES].filter(f => n.get(f)).sort((a, b) => n.get(b)! - n.get(a)!), pair = (a: Family): [Family, Family] => [a, fams.find(f => f !== a) ?? a];
@@ -22,7 +22,7 @@ export function wrappedCards(month: string, entries: Entry[], moments: Moment[],
   }
   const firsts = es.filter(e => e.marks.first);
   if (firsts.length) {
-    const names = firsts.slice(0, 3).map(e => entryLine(e, EMPTY_LOOKUP).replace(/\.$/, '')), more = firsts.length - names.length;
+    const names = firsts.slice(0, 3).map(e => entryLine(e, lookup).replace(/\.$/, '')), more = firsts.length - names.length;
     out.push({ kind: 'firsts', title: 'Firsts', big: String(firsts.length), line: `${names.join(', ')}${more ? `, and ${more} more` : ''}.`, families: pair(fams[0] ?? 'bright') });
   }
   const [word] = wordCounts(ms);

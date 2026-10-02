@@ -1,4 +1,5 @@
 import type { Entry, Moment, Person } from '../db/types';
+import type { Lookup } from '../domain/entryText';
 import { cardColours, cardPng, wrappedCards, type Card } from '../draw/cards';
 import { drawForm } from '../draw/forms';
 import { Scene } from '../draw/Canvas';
@@ -19,8 +20,8 @@ export function WrappedView({ month, cards, onSave }: { month: string; cards: Ca
         <button type="button" className="btn sm" style={{ color: col.text, borderColor: col.text, background: 'transparent' }} onClick={() => onSave(c)}>Save as picture</button></div>; })}</div>
   </>;
 }
-export function Wrapped({ month, entries, moments, people = [] }: { month: string; entries: Entry[]; moments: Moment[]; people?: Person[] }) {
+export function Wrapped({ month, entries, moments, people = [], lookup }: { month: string; entries: Entry[]; moments: Moment[]; people?: Person[]; lookup?: Lookup }) {
   const look = useLook(), undo = useUndo();
-  return <WrappedView month={month} cards={wrappedCards(month, entries, moments, people)} onSave={async c => {
+  return <WrappedView month={month} cards={wrappedCards(month, entries, moments, people, lookup)} onSave={async c => {
     try { await saveFile(await cardPng(c, look), `logbook-${month}-${c.kind}.png`); } catch (e) { undo.fail(e); } }} />;
 }

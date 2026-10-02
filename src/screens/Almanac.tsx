@@ -3,8 +3,9 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db/db';
 import { getSettings, setHeadline } from '../db/actions';
 import { addDays, dayKey, parseDay } from '../domain/day';
-import { monthLines, onThisDay, randomDay, weekLineSuggestion, weekOf, yearReport, type Report } from '../domain/almanac';
-import { EMPTY_LOOKUP, dateRange, entryLine } from '../domain/entryText';
+import { byOwner, monthLines, onThisDay, randomDay, weekLineSuggestion, weekOf, yearReport, type Report } from '../domain/almanac';
+import { dateRange, entryLine } from '../domain/entryText';
+import { loadLookup } from '../db/lookup';
 import { dayFamilies, maskMoments, maskPrivate, yearDays } from '../domain/looking';
 import { drawSmall } from '../draw/forms';
 import { drawYearRing, type YearDay } from '../draw/year';
@@ -73,14 +74,14 @@ export function Almanac({ tab = 'report' }: { tab?: AlmTab }) {
   const now = useNow(), today = dayKey(now), year = Number(today.slice(0, 4)), undo = useUndo(), { locked } = usePrivacy();
   const [line, setLine] = useState(''), [seed, setSeed] = useState(() => Math.random());
   const d = useLiveQuery(async () => {
-    const [rawEntries, rawMoments, rows, places, people, settings] = await Promise.all([db.entries.toArray(), db.moments.toArray(), db.days.toArray(), db.places.toArray(), db.people.toArray(), getSettings(db)]);
+    const [rawEntries, rawMoments, rows, places, people, settings, lookup] = await Promise.all([db.entries.toArray(), db.moments.toArray(), db.days.toArray(), db.places.toArray(), db.people.toArray(), getSettings(db), loadLookup(db)]);
     const entries = maskPrivate(rawEntries, locked), moments = maskMoments(rawMoments, rawEntries, locked);
-    const kept = [...new Set([...moments.map(m => m.day), ...entries.map(e => e.day)])].sort(), first = kept[0];
-    return { entries, moments, rows, places, people, voice: settings.voice, kept, issue: first ? Math.max(1, (year - Number(first.slice(0, 4))) * 12 + Number(today.slice(5, 7)) - Number(first.slice(5, 7)) + 1) : 1 };
+    const kept = [...new Set([...moments.map(m => m.day), ...entries.filter(byOwner).map(e => e.day)])].sort(), first = kept[0];
+    return { entries, moments, rows, places, people, lookup, voice: settings.voice, kept, issue: first ? Math.max(1, (year - Number(first.slice(0, 4))) * 12 + Number(today.slice(5, 7)) - Number(first.slice(5, 7)) + 1) : 1 };
   }, [locked, today]);
   if (!d) return <div className="scr" />;
   const mast = { issue: d.issue, year, kept: d.kept.filter(x => x.startsWith(String(year))).length };
-  const lineOf = (day: string) => { const e = [...d.entries].filter(x => x.day === day && !x.marks.quiet && !(locked && x.marks.priv)).sort((a, b) => a.at - b.at)[0]; return e && entryLine(e, EMPTY_LOOKUP); };
+  const lineOf = (day: string) => { const e = [...d.entries].filter(x => x.day === day && !x.marks.quiet && !(locked && x.marks.priv)).sort((a, b) => Number(byOwner(b)) - Number(byOwner(a)) || a.at - b.at)[0]; return e && entryLine(e, d.lookup); };
   let body: ReactNode;
   if (tab === 'report') {
     const fams = dayFamilies(d.moments.filter(m => m.day.startsWith(String(year))), d.rows), n = new Map<Family, number>();
@@ -96,13 +97,13 @@ export function Almanac({ tab = 'report' }: { tab?: AlmTab }) {
     }
     body = <HeadlinesView today={today} value={line} suggestion={suggestion} onValue={setLine} weeks={weeks} months={monthLines(year, d.entries, d.moments, today)} year={year}
       onKeep={async () => { try { undo.show(await setHeadline(db, wk.end, line), 'Kept this week’s line.'); setLine(''); } catch (e) { undo.fail(e); } }} />;
-  } else if (tab === 'wrapped') body = <Wrapped month={today.slice(0, 7)} entries={d.entries} moments={d.moments} people={d.people} />;
+  } else if (tab === 'wrapped') body = <Wrapped month={today.slice(0, 7)} entries={d.entries} moments={d.moments} people={d.people} lookup={d.lookup} />;
   else {
     const quietDays = new Set(d.kept.filter(day => { const es = d.entries.filter(e => e.day === day); return es.length > 0 && es.every(e => e.marks.quiet || (locked && e.marks.priv)); }));
     const pickDay = randomDay(d.kept.filter(x => x !== today), () => seed, quietDays), fams = dayFamilies(d.moments, d.rows), then = onThisDay(d.entries.filter(e => !(locked && e.marks.priv)), today)[0], nowLine = lineOf(today);
     body = <RandomView enough={d.kept.length >= 2} today={today} onAnother={() => setSeed(Math.random())} onOpen={day => go({ name: 'day', day })}
       pick={pickDay ? { day: pickDay, family: fams.get(pickDay)?.family, line: lineOf(pickDay) } : null}
-      then={then ? { year: then.year, line: entryLine(then.entry, EMPTY_LOOKUP) } : null} now={nowLine ? { line: nowLine } : null} />;
+      then={then ? { year: then.year, line: entryLine(then.entry, d.lookup) } : null} now={nowLine ? { line: nowLine } : null} />;
   }
   return <AlmanacView tab={tab} mast={mast}>{body}</AlmanacView>;
 }

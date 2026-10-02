@@ -4,6 +4,8 @@ import { feelingOf } from '../vocab/vocab';
 import { parseDay } from './day';
 
 /* What an entry points to, looked up once per screen. People are keyed by initial. */
+/* Shown in place of a private entry's words while the lock is on. */
+export const PRIVATE_TEXT = 'A private entry. Unlock to read.';
 export type Lookup = { places: Map<number, Place>; spans: Map<number, Span>; people: Map<string, Person> };
 export const EMPTY_LOOKUP: Lookup = { places: new Map(), spans: new Map(), people: new Map() };
 /* :word codes become plain words, so text reads naturally without the app. Unknown :words stay as typed. */
@@ -20,6 +22,7 @@ export const hostOf = (u: string) => { try { return u ? new URL(u).host : ''; } 
 export const minSec = (s: number) => `${Math.floor(s / 60)}:${String(Math.round(s % 60)).padStart(2, '0')}`;
 /* One plain sentence for any entry: the same words on cards, in the Markdown export and in search. */
 export function entryLine(e: Entry, lk: Lookup): string {
+  if (e.marks.priv && e.text === PRIVATE_TEXT) return PRIVATE_TEXT; // masked while locked: no title, place, person or host either
   const d = e.data, text = plainWords(e.text).trim(), tail = text ? ' ' + text : '';
   if (!d) return text;
   switch (d.kind) {
