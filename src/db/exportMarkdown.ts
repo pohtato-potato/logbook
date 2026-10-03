@@ -1,4 +1,5 @@
 import type { LogbookDb } from './db';
+import type { MediaDay } from '../shelf/shelf';
 import type { Place, WeekSong } from './types';
 import { parsePostcard, type Postcard } from '../sources/shelf';
 import { parseDay } from '../domain/day';
@@ -21,7 +22,8 @@ const folder = (day: string) => `${day.slice(0, 4)}/${day.slice(5, 7)}`;
 const audioExt = (type: string) => (type.includes('mp4') || type.includes('m4a') ? 'm4a' : type.includes('ogg') ? 'ogg' : 'webm');
 export async function makeMarkdownZip(db: LogbookDb): Promise<Blob> {
   const [entries, moments, days, photos, cards, songs] = await Promise.all([db.entries.toArray(), db.moments.toArray(), db.days.toArray(), db.photos.toArray(), db.postcards.toArray(), db.songs.toArray()]);
-  const postcards = new Map(cards.flatMap(c => { const p = parsePostcard(c.data); return p ? [[p.day, p] as [string, Postcard]] : []; }));
+  const postcards = new Map(cards.flatMap(c => { const p = c.app === 'health' ? parsePostcard(c.data) : null; return p ? [[p.day, p] as [string, Postcard]] : []; }));
+  const mediaDays = new Map(cards.flatMap(c => (c.app === 'media' ? [[c.day, c.data as MediaDay] as [string, MediaDay]] : [])));
   const lk = await loadLookup(db), bin: { path: string; data: Uint8Array }[] = [], files = new Map<string, DayFiles>();
   const of = (day: string) => { let f = files.get(day); if (!f) files.set(day, (f = { photos: [], audio: new Map(), keepPhotos: new Map() })); return f; };
   const photoPath = new Map<number, string>();
@@ -36,7 +38,7 @@ export async function makeMarkdownZip(db: LogbookDb): Promise<Blob> {
     const path = `audio/${folder(e.day)}/${e.day}-${e.id}.${audioExt(e.data.type)}`; bin.push({ path, data: new Uint8Array(await e.data.audio.arrayBuffer()) }); of(e.day).audio.set(e.id!, path);
   }
   for (const e of entries) if (e.data?.kind === 'keep' && e.data.photoId != null && photoPath.has(e.data.photoId)) of(e.day).keepPhotos!.set(e.id!, photoPath.get(e.data.photoId)!);
-  const keys = [...new Set([...entries.map(e => e.day), ...moments.map(m => m.day), ...days.map(d => d.day), ...byDay.keys(), ...postcards.keys()])].sort();
-  const md = keys.map(k => ({ path: `${folder(k)}/${k}.md`, data: dayToMarkdown(k, days.find(d => d.day === k), entries.filter(e => e.day === k), moments.filter(m => m.day === k), lk, files.get(k), postcards.get(k)) }));
+  const keys = [...new Set([...entries.map(e => e.day), ...moments.map(m => m.day), ...days.map(d => d.day), ...byDay.keys(), ...postcards.keys(), ...mediaDays.keys()])].sort();
+  const md = keys.map(k => ({ path: `${folder(k)}/${k}.md`, data: dayToMarkdown(k, days.find(d => d.day === k), entries.filter(e => e.day === k), moments.filter(m => m.day === k), lk, files.get(k), postcards.get(k), mediaDays.get(k)) }));
   return makeZip([{ path: 'README.md', data: README }, { path: 'places.md', data: placesMarkdown(await db.places.toArray()) }, ...(songs.length ? [{ path: 'songs.md', data: songsMarkdown(songs) }] : []), ...md, ...bin]);
 }

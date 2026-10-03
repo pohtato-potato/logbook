@@ -18,3 +18,8 @@
 .tlbtns{display:flex; flex-wrap:wrap; gap:10px; margin-top:6px}
 .tlbtns .btn{min-height:44px}
 .toast.update{top:calc(env(safe-area-inset-top) + 10px); bottom:auto}
+/* Media's day (from the shelf v2): films, books and shows live in Media now; each one opens there. */
+.mediaday{--hp-quiet:var(--quiet, #a3a1a8)}
+.md-items{list-style:none; margin:8px 0 0; padding:0; display:grid; gap:10px}
+.md-items li{display:grid; gap:2px}
+.md-items a{color:inherit; text-decoration:underline; text-underline-offset:.2em; min-height:44px; display:inline-flex; align-items:center}

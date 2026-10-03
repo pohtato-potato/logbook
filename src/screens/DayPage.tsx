@@ -15,6 +15,8 @@ import { Tabs } from '../ui/Tabs';
 import { useLook } from '../ui/Look';
 import { suggestedOverall } from './Today';
 import { KeptCard } from './KeptCard';
+import { MediaDayView } from './MediaDay';
+import type { MediaDay } from '../shelf/shelf';
 import { FeelingCard } from './FeelingCard';
 import { EntryMenu } from './EntryMenu';
 import { PRIVATE_FEELING, maskMoments } from '../domain/looking';
@@ -31,7 +33,7 @@ export const toDayMoments = (ms: Moment[]): DayMoment[] => [...ms].sort((a, b) =
   return { h: h < 4 ? h + 24 : h, family: m.family, second: m.second, strength: m.strength };
 });
 /* The day page: the picture on top, and the story underneath as the one place each moment is read. */
-export function DayPageView({ day, style, entries, moments, overall, own, lookup = EMPTY_LOOKUP, thumbs, onOpenFeeling, onEntryMenu, stamps, echoes }: { day: string; style: 'bloom' | 'score'; entries: Entry[]; moments: Moment[]; overall?: DayRow['overall']; own: Record<string, Family>; lookup?: Lookup; thumbs?: Map<number, Blob>; onOpenFeeling?(word: string, entryId: number): void; onEntryMenu?(id: number): void; stamps?: StampsProps; echoes?: Map<number, { day: string; word: string }> }) {
+export function DayPageView({ day, style, entries, moments, overall, own, lookup = EMPTY_LOOKUP, thumbs, onOpenFeeling, onEntryMenu, stamps, echoes, media }: { day: string; media?: MediaDay; style: 'bloom' | 'score'; entries: Entry[]; moments: Moment[]; overall?: DayRow['overall']; own: Record<string, Family>; lookup?: Lookup; thumbs?: Map<number, Blob>; onOpenFeeling?(word: string, entryId: number): void; onEntryMenu?(id: number): void; stamps?: StampsProps; echoes?: Map<number, { day: string; word: string }> }) {
   const look = useLook(), dms = toDayMoments(moments), ov = overall ?? (() => { const s = suggestedOverall(moments); return s ? { ...s, set: false } : undefined; })();
   const fam: Family = ov?.family ?? dms[0]?.family ?? 'calm';
   const items: { at: number; node: ReactNode }[] = [
@@ -45,7 +47,7 @@ export function DayPageView({ day, style, entries, moments, overall, own, lookup
   return <div className={'scr' + (style === 'score' ? ' ds-score' : '')}><div className="content scroll">
     <header className="thead onwall"><button type="button" className="back" aria-label="Back" onClick={() => history.back()}><Icon name="back" /></button>
       <h1 className="tdate sm">{parseDay(day).toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</h1></header>
-    {empty ? <p className="entry">Nothing kept on this day.</p> : <>
+    {empty ? (media?.items.length ? null : <p className="entry">Nothing kept on this day.</p>) : <>
       <div className={'dhero ' + (style === 'bloom' ? 'bloomline' : '')}>
         <Scene animate className={style === 'score' ? 'sc-staff' : undefined} label="The day's colours, from morning to night"
           draw={(ctx, w, h, t) => style === 'bloom' ? drawBloomLine(ctx, look, w, h, t, dms, fam) : drawScoreLine(ctx, look, w, h, t, dms)} />
@@ -54,6 +56,7 @@ export function DayPageView({ day, style, entries, moments, overall, own, lookup
       {style === 'score' && <p className="hint">Placed only by time. Bigger marks were felt more strongly.</p>}
       <section className="panel story" aria-label="The day, moment by moment" style={{ ['--daygrad' as string]: `linear-gradient(${moments.map(m => look.pal[m.family]).join(', ') || look.pal[fam]}, ${look.pal[fam]})` }}>{items.map(i => i.node)}</section>
     </>}
+    {media && media.items.length > 0 && <MediaDayView day={media} />}
     {stamps && <StampsPanelView {...stamps} title="The day’s stamps" />}
   </div><Tabs current="cal" /></div>;
 }
@@ -70,9 +73,10 @@ export function DayPage({ day }: { day: string }) {
     entries: await db.entries.where('day').equals(day).toArray(), moments: await db.moments.where('day').equals(day).toArray(), row: await db.days.get(day), settings: await getSettings(db),
     own: Object.fromEntries((await db.words.toArray()).map(w => [w.word, w.family])) as Record<string, Family>, lookup: await loadLookup(db),
     thumbs: new Map((await db.photos.where('day').equals(day).toArray()).map(ph => [ph.id!, ph.thumb])),
+    media: (await db.postcards.get(`media:${day}`))?.data as MediaDay | undefined,
   }), [day]);
   if (!data) return <div className="scr" />;
-  return <><DayPageView day={day} style={data.settings.dayStyle} entries={data.entries} moments={maskMoments(data.moments, data.entries, locked)} echoes={echoesOf(data.moments, data.all, [...data.entries, ...data.allEntries], locked)} overall={data.row?.overall} own={data.own} lookup={data.lookup} thumbs={data.thumbs} onOpenFeeling={(word, id) => setCard({ word, id })} onEntryMenu={setMenu}
+  return <><DayPageView day={day} style={data.settings.dayStyle} entries={data.entries} moments={maskMoments(data.moments, data.entries, locked)} echoes={echoesOf(data.moments, data.all, [...data.entries, ...data.allEntries], locked)} overall={data.row?.overall} own={data.own} lookup={data.lookup} thumbs={data.thumbs} media={data.media} onOpenFeeling={(word, id) => setCard({ word, id })} onEntryMenu={setMenu}
       stamps={{ list: st.list, status: st.status, open, onToggle: () => setOpen(!open), onWhere: () => {}, canLocate: false, placeSource: st.pos?.source, isToday: false }} />
     {menu != null && <EntryMenu id={menu} onClose={() => setMenu(null)} />}
     {card && <FeelingCard word={card.word} src={{ kind: 'entry', id: card.id }} own={data.own} onClose={() => setCard(null)} />}</>;

@@ -1,5 +1,7 @@
 import type { DayRow, Entry, Moment } from '../db/types';
 import type { Postcard } from '../sources/shelf';
+import type { MediaDay } from '../shelf/shelf';
+import { mediaDayMarkdown } from '../screens/MediaDay';
 import { FAMILY_NAME, ladderName } from '../vocab/vocab';
 import { weatherLine } from './stamps';
 import { safeUrl } from '../share';
@@ -20,7 +22,7 @@ const q = (s: string) => '"' + s.replace(/\\/g, '\\\\').replace(/"/g, '\\"') + '
 const hm = (m: number) => { const r = Math.round(m); return `${Math.floor(r / 60)} h ${r % 60} m`; };
 const postcardFacts = (p: Postcard) => [p.steps != null && `Steps: ${p.steps.toLocaleString('en-GB')}`, p.sleepMin != null && `Sleep: ${hm(p.sleepMin)}`, `Workout: ${p.workout ? `${p.workout.name}, ${p.workout.minutes} min` : 'a rest day'}`, p.walk && `India walk: ${Math.round(p.walk.km)} km, at ${p.walk.place}`].filter((x): x is string => !!x);
 /* One day as a plain Markdown file anyone can read in ten years: front matter, then entries and feelings in time order. */
-export function dayToMarkdown(day: string, row: DayRow | undefined, entries: Entry[], moments: Moment[], lk: Lookup = EMPTY_LOOKUP, files: DayFiles = { photos: [], audio: new Map() }, postcard?: Postcard): string {
+export function dayToMarkdown(day: string, row: DayRow | undefined, entries: Entry[], moments: Moment[], lk: Lookup = EMPTY_LOOKUP, files: DayFiles = { photos: [], audio: new Map() }, postcard?: Postcard, media?: MediaDay): string {
   const fm = ['---', `date: ${day}`];
   if (row?.overall) fm.push(`overall: ${q(`${row.overall.word} (${FAMILY_NAME[row.overall.family]}, ${ladderName(row.overall.family, row.overall.strength)})`)}`);
   if (row?.stamps?.weather) fm.push(`weather: ${q(weatherLine(row.stamps.weather))}`);
@@ -49,5 +51,6 @@ export function dayToMarkdown(day: string, row: DayRow | undefined, entries: Ent
   if (files.photos.length) { body.push('## Photos', ''); [...files.photos].sort((a, b) => Number(b.potd) - Number(a.potd)).forEach(p => body.push(`![Photo](../../${p.path})${p.potd ? ' (photo of the day)' : ''}`, '')); }
   if (row?.grateful) body.push('## Grateful for', '', row.grateful, '');
   if (postcard) body.push('## Postcard from Health', '', postcard.line, '', ...postcardFacts(postcard).map(f => `- ${f}`), '');
+  if (media?.items.length) body.push(mediaDayMarkdown(media));
   return fm.join('\n') + body.join('\n');
 }
