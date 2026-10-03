@@ -6,7 +6,8 @@ import { DEFAULT_SETTINGS, type Settings as S } from '../db/types';
 import { makeMarkdownZip } from '../db/exportMarkdown';
 import { BackupError, makeBackupZip, restoreBackupFile } from '../db/backup';
 import { StarterError, applyStarter, parseStarter } from '../db/starter';
-import { dayKey, parseDay } from '../domain/day';
+import { dayKey, parseDay, timeLabel } from '../domain/day';
+import { runSync, syncMessage } from '../ui/syncNow';
 import { sourcesOf } from '../db/stamps';
 import { createLock, lockSupport } from '../domain/lock';
 import { DRIVE_SCOPE, backFromGoogle, signIn } from '../sources/google';
@@ -29,7 +30,7 @@ export async function saveFile(blob: Blob, name: string): Promise<boolean> {
 const pick = <T extends string | number,>(label: string, options: [T, string][], cur: T, on: (v: T) => void) =>
   <div className="chips" role="group" aria-label={label}>{options.map(([v, l]) => <button key={String(v)} type="button" className={'chip' + (v === cur ? ' on ink' : '')} aria-pressed={v === cur} onClick={() => on(v)}>{l}</button>)}</div>;
 const Row = ({ title, sub, children }: { title: string; sub: string; children?: ReactNode }) => <div className="setrow"><div><b>{title}</b><span>{sub}</span></div>{children}</div>;
-export type SettingsProps = { settings: S; message: string; onVoice(i: number): void; onDayStyle(s: S['dayStyle']): void; onTheme(t: S['theme']): void; onMotion(m: S['motion']): void; onExport(): void; onBackup(): void; onRestore(f: File): void; onStarter(f: File): void; onSource?(key: 'weather' | 'places' | 'songs' | 'drive' | 'photos', on: boolean): void; lockSupported?: boolean | null; onLock?(on: boolean): void; onResetLock?(): void; onDrive?(): void; timeline?: { summary: string; count: number } | null; onTimelineFile?(files: File[]): void; onTimelineKeep?(): void; onTimelineCancel?(): void };
+export type SettingsProps = { settings: S; message: string; onVoice(i: number): void; onDayStyle(s: S['dayStyle']): void; onTheme(t: S['theme']): void; onMotion(m: S['motion']): void; onExport(): void; onBackup(): void; onRestore(f: File): void; onStarter(f: File): void; onSource?(key: 'weather' | 'places' | 'songs' | 'drive' | 'photos' | 'sync', on: boolean): void; onSync?(): void; lockSupported?: boolean | null; onLock?(on: boolean): void; onResetLock?(): void; onDrive?(): void; timeline?: { summary: string; count: number } | null; onTimelineFile?(files: File[]): void; onTimelineKeep?(): void; onTimelineCancel?(): void };
 const monthYear = (d: string) => parseDay(d).toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
 const Switch = ({ on, label, onFlip }: { on: boolean; label: string; onFlip(): void }) =>
   <button type="button" role="switch" aria-checked={on} aria-label={label} className={'btn sm' + (on ? ' primary' : '')} onClick={onFlip}>{on ? 'On' : 'Off'}</button>;
@@ -68,6 +69,9 @@ export function SettingsView(p: SettingsProps) {
       <Row title="Drive backup" sub={googleReady ? 'A monthly copy of your export and backup, in a Logbook folder on your Google Drive.' : 'Not set up: needs a Google client ID in your starter file.'}>{googleReady && <Switch on={sources.drive} label="Drive backup" onFlip={() => p.onSource?.('drive', !sources.drive)} />}</Row>
       {googleReady && sources.drive && <><button type="button" className="btn wide" onClick={p.onDrive}>Back up to Drive now</button><p className="hint">{s.lastDrive ? `Last on ${new Date(s.lastDrive).toLocaleDateString('en-GB', { day: 'numeric', month: 'long' })}.` : 'Not backed up to Drive yet.'} Google asks you to sign in each time; nothing else on your Drive is visible to Logbook.</p></>}
       <Row title="Google Photos" sub={googleReady ? 'Choose today’s photos from Google Photos, only when you ask.' : 'Not set up: needs a Google client ID in your starter file.'}>{googleReady && <Switch on={sources.photos} label="Google Photos" onFlip={() => p.onSource?.('photos', !sources.photos)} />}</Row>
+      <Row title="Sync between devices" sub={googleReady ? 'Keeps this device and your others the same, through a sync folder inside the Logbook folder on your Drive.' : 'Not set up: needs a Google client ID in your starter file.'}>{googleReady && <Switch on={sources.sync} label="Sync between devices" onFlip={() => p.onSource?.('sync', !sources.sync)} />}</Row>
+      {googleReady && sources.sync && <><button type="button" className="btn wide" onClick={p.onSync}>Sync now</button>
+        <p className="hint">{s.sync?.last ? `Last synced ${new Date(s.sync.last).toLocaleDateString('en-GB', { day: 'numeric', month: 'long' })}, ${timeLabel(new Date(s.sync.last))}${s.sync.with?.length ? `, with ${s.sync.with.join(' and ')}` : ''}.` : 'Not synced yet.'} Load the same starter file on each device and tap Sync now on each once. After that it syncs by itself while you’re signed in to Google.</p></>}
       <Row title="Google Maps Timeline" sub="Adds your visits since 2022 from a Timeline file you exported. The file is read on this phone only."><button type="button" className="btn sm" onClick={() => timeline.current?.click()}>Choose file</button></Row>
       <input ref={timeline} type="file" accept="application/json,.json" multiple hidden onChange={e => { const f = [...(e.target.files ?? [])]; if (f.length) p.onTimelineFile?.(f); e.target.value = ''; }} />
       {p.timeline && <div className="tlprev" role="status"><p>{p.timeline.summary}</p>
@@ -111,6 +115,7 @@ export function Settings() {
       if (!plan) return;
       const r = await importTimeline(db, plan); setPlan(null);
       undo.show(r.undo, r.added ? `Added ${r.added.toLocaleString('en-GB')} ${r.added === 1 ? 'visit' : 'visits'} from Timeline.` : 'Those visits were already in Logbook.'); }, true)()}
+    onSync={() => void act(async () => { if (!(await opened())) return; setMessage('Syncing…'); const r = await runSync(true); if (r) setMessage(syncMessage(r)); }, true)()}
     onResetLock={() => void act(async () => { if (await newLock()) setMessage('The lock is set up again.'); })()}
     onVoice={voice => void saveSettings(db, { voice })} onDayStyle={dayStyle => void saveSettings(db, { dayStyle })} onTheme={theme => void saveSettings(db, { theme })} onMotion={motion => void saveSettings(db, { motion })}
     onExport={act(async () => { if (!(await opened())) return; if (!(await saveFile(await makeMarkdownZip(db), `logbook-export-${today}.zip`))) return; await saveSettings(db, { lastExport: Date.now() }); setMessage('Exported. The zip holds one Markdown file per day.'); }, true)}

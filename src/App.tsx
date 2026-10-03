@@ -27,12 +27,13 @@ import { useWide } from './ui/useWide';
 import { useKeys } from './ui/keys';
 import { PrivacyProvider } from './ui/Privacy';
 import { UpdateNotice } from './pwa';
+import { useAutoSync } from './ui/useAutoSync';
 
 /* The Undo notice belongs to the screen it was shown on: moving to another screen clears it. */
 function ClearUndoOnMove({ at }: { at: string }) { const { moved } = useUndo(); useEffect(() => { moved(); }, [at, moved]); return null; }
 export function App() {
   const r = useRoute(), wide = useWide();
-  useKeys(r, wide);
+  useKeys(r, wide); useAutoSync();
   const settings = useLiveQuery(() => getSettings(db), []) ?? DEFAULT_SETTINGS;
   useEffect(() => {
     const root = document.documentElement;
