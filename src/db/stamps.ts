@@ -7,7 +7,7 @@ import { indianAqi } from '../domain/aqi';
 import { airUrl, parseAir, parseWeather, weatherUrl } from '../sources/openMeteo';
 import type { FetchJson } from '../sources/http';
 
-export const sourcesOf = (s: Settings) => ({ weather: true, places: true, songs: true, drive: true, photos: true, ...s.sources });
+export const sourcesOf = (s: Settings) => ({ weather: true, places: true, songs: true, drive: true, photos: true, sync: true, ...s.sources });
 const STALE = 3 * 3600_000, RETRY = 15 * 60_000, r3 = (x: number) => Math.round(x * 1000) / 1000;
 const once = (label: string, fn: () => Promise<unknown>): Undo => { let done = false; return { label, run: async () => { if (done) return; done = true; await fn(); } }; };
 /* Places kept on a day that have a position. */

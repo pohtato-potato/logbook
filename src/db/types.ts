@@ -30,8 +30,10 @@ export type WeekSong = { week: string; artist: string; track: string; plays: num
 export type DayRow = { day: string; overall?: { word: string; family: Family; strength: number; set: boolean }; grateful?: string; potd?: number; stamps?: DayStamps; headline?: string; userAt?: number } & Synced;
 export type Person = { id: string; initial: string; name: string; thread: number; birthday?: string } & Synced;
 export type OwnWord = { word: string; family: Family; created: number } & Synced;
-export type Sources = { weather: boolean; places: boolean; songs?: boolean; drive?: boolean; photos?: boolean };
+export type Sources = { weather: boolean; places: boolean; songs?: boolean; drive?: boolean; photos?: boolean; sync?: boolean };
+/* This device's side of sync: its own id, where it got to in each other device's file, and when it last synced. */
+export type SyncState = { device: string; cursors: Record<string, string>; labels?: Record<string, string>; last?: number; with?: string[] };
 /* What the private starter file brings for the linked sources. Never in the repo. */
 export type Links = { lastfm: string[]; lastfmKey?: string; googleClientId?: string };
-export type Settings = { id: 'main'; voice: number; dayStyle: 'bloom' | 'score'; theme: 'dark' | 'light'; motion: 'still' | 'gentle' | 'lively'; homes: { name: string; lat: number; lon: number; from: string; to?: string }[]; starterLoaded: boolean; lastExport?: number; lastDrive?: number; sources?: Sources; links?: Links; lock?: { credentialId: string; createdAt: number; userId?: string } };
+export type Settings = { id: 'main'; voice: number; dayStyle: 'bloom' | 'score'; theme: 'dark' | 'light'; motion: 'still' | 'gentle' | 'lively'; homes: { name: string; lat: number; lon: number; from: string; to?: string }[]; starterLoaded: boolean; lastExport?: number; lastDrive?: number; sync?: SyncState; sources?: Sources; links?: Links; lock?: { credentialId: string; createdAt: number; userId?: string } };
 export const DEFAULT_SETTINGS: Settings = { id: 'main', voice: 0, dayStyle: 'bloom', theme: 'dark', motion: 'gentle', homes: [], starterLoaded: false };

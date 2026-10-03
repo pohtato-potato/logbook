@@ -9,22 +9,34 @@ import { OfflineError, type AuthCall, type AuthSend } from './http';
 /* Drive backup: a monthly copy of the export and the backup in a visible "Logbook" folder. With the drive.file permission,
    Logbook can only see the files it made itself; the rest of the Drive stays out of reach. */
 const API = 'https://www.googleapis.com/drive/v3/files', UP = 'https://www.googleapis.com/upload/drive/v3/files', FOLDER = 'application/vnd.google-apps.folder';
-const find = async (call: AuthCall, q: string) => ((await call(`${API}?${new URLSearchParams({ q, fields: 'files(id,name)', spaces: 'drive' })}`)) as { files?: { id: string }[] }).files?.[0]?.id;
-async function folder(call: AuthCall): Promise<string> {
-  const have = await find(call, `name='Logbook' and mimeType='${FOLDER}' and trashed=false`); if (have) return have;
-  return ((await call(API, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: 'Logbook', mimeType: FOLDER }) })) as { id: string }).id;
+export const CHUNK_SIZE = 4 * 1024 * 1024;
+export const find = async (call: AuthCall, q: string) => ((await call(`${API}?${new URLSearchParams({ q, fields: 'files(id,name)', spaces: 'drive' })}`)) as { files?: { id: string }[] }).files?.[0]?.id;
+/* A folder Logbook made ("Logbook" at the top, or one inside it), made if it isn't there yet. */
+export async function folder(call: AuthCall, name = 'Logbook', parent?: string): Promise<string> {
+  const have = await find(call, `name='${name}' and mimeType='${FOLDER}'${parent ? ` and '${parent}' in parents` : ''} and trashed=false`); if (have) return have;
+  return ((await call(API, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, mimeType: FOLDER, ...(parent ? { parents: [parent] } : {}) }) })) as { id: string }).id;
 }
+/* Every file in a folder, with when it last changed (followed across pages). */
+export async function listFolder(call: AuthCall, parent: string): Promise<Map<string, { id: string; modifiedTime: string }>> {
+  const out = new Map<string, { id: string; modifiedTime: string }>(); let page = '';
+  do {
+    const r = (await call(`${API}?${new URLSearchParams({ q: `'${parent}' in parents and trashed=false`, fields: 'nextPageToken,files(id,name,modifiedTime)', pageSize: '1000', spaces: 'drive', ...(page ? { pageToken: page } : {}) })}`)) as { files?: { id: string; name: string; modifiedTime: string }[]; nextPageToken?: string };
+    for (const f of r.files ?? []) out.set(f.name, { id: f.id, modifiedTime: f.modifiedTime }); page = r.nextPageToken ?? '';
+  } while (page);
+  return out;
+}
+export const download = (call: AuthCall, id: string) => call(`${API}/${id}?alt=media`);
 /* Each file goes up as a resumable upload, a few MB at a time, so a large archive on a slow connection still gets there
    (each piece has its own time limit). Drive's switch is read again before every piece. */
 const CHUNK = 4 * 1024 * 1024;
-async function put(g: Google, parent: string, name: string, blob: Blob, chunk: number, stillOn: () => Promise<void>, step: (bytes: number) => void) {
-  const id = await find(g.call, `name='${name}' and '${parent}' in parents and trashed=false`), type = blob.type || 'application/zip';
+export async function put(g: Google, parent: string, name: string, blob: Blob, chunk: number, stillOn: () => Promise<void>, step: (bytes: number) => void, known?: string | null) {
+  const id = known !== undefined ? known : await find(g.call, `name='${name}' and '${parent}' in parents and trashed=false`), type = blob.type || 'application/zip';
   const start = await g.send(id ? `${UP}/${id}?uploadType=resumable` : `${UP}?uploadType=resumable`, { method: id ? 'PATCH' : 'POST', headers: { 'Content-Type': 'application/json; charset=UTF-8', 'X-Upload-Content-Type': type, 'X-Upload-Content-Length': String(blob.size) }, body: JSON.stringify(id ? { name } : { name, parents: [parent] }) });
   const session = start.headers.get('Location'); if (!session?.startsWith('https://www.googleapis.com/')) throw new OfflineError();
   let at = 0;
   for (;;) {
     await stillOn();
-    const end = Math.min(at + chunk, blob.size), r = await g.send(session, { method: 'PUT', headers: { 'Content-Range': `bytes ${at}-${end - 1}/${blob.size}` }, body: blob.slice(at, end) });
+    const end = Math.min(at + chunk, blob.size), r = await g.send(session, { method: 'PUT', headers: { 'Content-Range': blob.size ? `bytes ${at}-${end - 1}/${blob.size}` : 'bytes */0' }, body: blob.slice(at, end) });
     if (r.status === 308) { const got = r.headers.get('Range'); step((got ? Number(got.split('-')[1]) + 1 : end) - at); at = got ? Number(got.split('-')[1]) + 1 : end; continue; }
     if (r.ok) { step(end - at); return; }
     throw new OfflineError();
