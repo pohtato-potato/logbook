@@ -34,7 +34,8 @@ describe('places and spans save all or nothing, and Undo or Remove tidy up', () 
     const before = await db.places.toArray();
     const r = await keepPlace(db, { name: 'stall', first: false, lat: 10.002, lon: 20.002, at });
     expect((await db.places.toArray())[0]).toMatchObject({ visits: 2, lat: 10.002 });
-    await r.undo.run(); expect(await db.places.toArray()).toEqual(before);
+    const bare = (ps: { updatedAt?: number }[]) => ps.map(({ updatedAt: _u, ...p }) => p); // Undo is a new edit for sync, so only its time moves on
+    await r.undo.run(); expect(bare(await db.places.toArray())).toEqual(bare(before));
     expect(first.entryId).toBeGreaterThan(0);
   });
   it('removing a place entry takes back its visit, and Undo puts it back', async () => {
