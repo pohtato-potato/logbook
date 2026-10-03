@@ -1,0 +1,42 @@
+{
+  "id": "media.day:2026-10-02",
+  "format": "media.day",
+  "version": 1,
+  "from": "media",
+  "to": "logbook",
+  "about": {
+    "day": "2026-10-02"
+  },
+  "writtenAt": 1790740000000,
+  "data": {
+    "day": "2026-10-02",
+    "items": [
+      {
+        "workId": "w-perfect-days",
+        "kind": "film",
+        "title": "Perfect Days",
+        "did": [
+          "finished",
+          "rated"
+        ],
+        "rating": 6,
+        "line": "The trees at lunch."
+      },
+      {
+        "workId": "w-vagabond",
+        "kind": "manga",
+        "title": "Vagabond",
+        "did": [
+          "noted"
+        ],
+        "line": "Invincible is just a word."
+      }
+    ],
+    "feelings": [
+      {
+        "w": "tender",
+        "family": "love"
+      }
+    ]
+  }
+}

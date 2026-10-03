@@ -1,0 +1,14 @@
+{
+  "id": "logbook.share:1790740000000",
+  "format": "logbook.share",
+  "version": 1,
+  "from": "logbook",
+  "to": "media",
+  "about": {},
+  "writtenAt": 1790740000000,
+  "data": {
+    "title": "How a film is edited",
+    "text": "",
+    "url": "https://youtu.be/example"
+  }
+}

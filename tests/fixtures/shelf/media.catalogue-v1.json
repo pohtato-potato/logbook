@@ -1,0 +1,24 @@
+{
+  "id": "media.catalogue",
+  "format": "media.catalogue",
+  "version": 1,
+  "from": "media",
+  "to": "logbook",
+  "about": {},
+  "writtenAt": 1790740000000,
+  "data": {
+    "works": [
+      {
+        "id": "w-perfect-days",
+        "kind": "film",
+        "title": "Perfect Days",
+        "year": 2023
+      },
+      {
+        "id": "w-vagabond",
+        "kind": "manga",
+        "title": "Vagabond"
+      }
+    ]
+  }
+}

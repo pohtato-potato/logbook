@@ -1,0 +1,21 @@
+{
+  "id": "logbook.handover:e-19c2",
+  "format": "logbook.handover",
+  "version": 1,
+  "from": "logbook",
+  "to": "media",
+  "about": {
+    "item": "e-19c2"
+  },
+  "writtenAt": 1790740000000,
+  "data": {
+    "uid": "e-19c2",
+    "day": "2026-09-14",
+    "at": 1789400000000,
+    "media": "Film",
+    "title": "Spirited Away",
+    "rating": 7,
+    "current": false,
+    "text": "The train scene, again."
+  }
+}

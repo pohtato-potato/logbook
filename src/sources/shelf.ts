@@ -1,9 +1,11 @@
 import type { LogbookDb } from '../db/db';
+import { cardsFor, parseCard, type HealthDay, type MediaDay } from '../shelf/shelf';
 
-/* The shared shelf: a small IndexedDB on the same website where each app in the family leaves daily "postcards" for the others.
-   Health writes its own; Logbook only reads. Both apps open it at the same version with the same store, so either may create it.
-   This file and Health's copy are pinned by the same contract fixture (tests/fixtures/postcard-v1.json in both repos). */
-export const SHELF_DB = 'shelf', SHELF_VERSION = 1, SHELF_STORE = 'postcards', POSTCARD_VERSION = 1;
+/* The shared shelf (version 2): a small IndexedDB on the same website where the family's apps leave cards for each other.
+   The contract is src/shelf/shelf.ts, a byte-identical copy of the suite's. Logbook copies the cards it reads into its own
+   postcards table (so they live in its backup, export and sync): Health's day keeps the shape its screens have always read
+   (the v1 Postcard below), and Media's day sits beside it. */
+export const POSTCARD_VERSION = 1;
 export type Postcard = {
   id: string; app: 'health'; version: 1; day: string; writtenAt: number;
   steps: number | null; sleepMin: number | null;
@@ -28,26 +30,20 @@ export function parsePostcard(v: unknown): Postcard | null {
     workout: (p.workout as Postcard['workout']) ?? null, checkin: (p.checkin as Postcard['checkin']) ?? null, walk: (p.walk as Postcard['walk']) ?? null,
     rings: { workout: r!.workout as number, sleep: r!.sleep as number, steps: r!.steps as number }, line: (p.line as string).slice(0, 300) };
 }
-export function openShelf(): Promise<IDBDatabase> {
-  return new Promise((ok, no) => {
-    const req = indexedDB.open(SHELF_DB, SHELF_VERSION);
-    req.onupgradeneeded = () => { if (!req.result.objectStoreNames.contains(SHELF_STORE)) req.result.createObjectStore(SHELF_STORE, { keyPath: 'id' }); };
-    req.onsuccess = () => ok(req.result); req.onerror = () => no(req.error);
-  });
-}
-export async function readShelf(): Promise<unknown[]> {
-  const s = await openShelf();
-  try { return await new Promise((ok, no) => { const q = s.transaction(SHELF_STORE).objectStore(SHELF_STORE).getAll(); q.onsuccess = () => ok(q.result as unknown[]); q.onerror = () => no(q.error); }); }
-  finally { s.close(); }
-}
-/* Copies Health's postcards into Logbook's own table (so they survive in Logbook's backup and export), keeping the newest of each. */
-export async function syncPostcards(db: LogbookDb, read: () => Promise<unknown[]> = readShelf): Promise<number> {
+/* Health's day card (v2), in the Postcard shape Logbook stores and draws. */
+export const fromHealthDay = (d: HealthDay, writtenAt: number): Postcard => ({ id: `health:${d.day}`, app: 'health', version: 1, writtenAt, ...d });
+/* Copies the cards left for Logbook into its own table, keeping the newest of each: Health's day and Media's day. Anything else is ignored. */
+export async function syncPostcards(db: LogbookDb, read: () => Promise<unknown[]> = () => cardsFor('logbook')): Promise<number> {
   let raw: unknown[]; try { raw = await read(); } catch { return 0; }
   let n = 0;
   for (const v of raw) {
-    const p = parsePostcard(v); if (!p) continue;
-    const cur = await db.postcards.get(p.id), curAt = (cur?.data as Postcard | undefined)?.writtenAt ?? -1;
-    if (p.writtenAt > curAt) { await db.postcards.put({ id: p.id, app: 'health', day: p.day, version: p.version, data: p, receivedAt: Date.now() }); n++; }
+    const c = parseCard(v); if (!c) continue;
+    let row: { id: string; app: string; day: string; version: number; data: unknown; writtenAt: number } | null = null;
+    if (c.format === 'health.day') { const p = parsePostcard(fromHealthDay(c.data as HealthDay, c.writtenAt)); if (p) row = { id: p.id, app: 'health', day: p.day, version: 1, data: p, writtenAt: c.writtenAt }; }
+    else if (c.format === 'media.day') { const d = c.data as MediaDay; row = { id: `media:${d.day}`, app: 'media', day: d.day, version: 1, data: d, writtenAt: c.writtenAt }; }
+    if (!row) continue;
+    const cur = await db.postcards.get(row.id), curAt = (cur?.data as { writtenAt?: number } | undefined)?.writtenAt ?? (cur as { writtenAt?: number } | undefined)?.writtenAt ?? -1;
+    if (row.writtenAt > curAt) { const { writtenAt, ...rest } = row; await db.postcards.put({ ...rest, data: row.app === 'media' ? { ...(row.data as object), writtenAt } : row.data, receivedAt: Date.now() }); n++; }
   }
   return n;
 }

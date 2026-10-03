@@ -1,0 +1,22 @@
+{
+  "id": "logbook.mention:e-7f3a",
+  "format": "logbook.mention",
+  "version": 1,
+  "from": "logbook",
+  "to": "media",
+  "about": {
+    "item": "w-perfect-days"
+  },
+  "writtenAt": 1790740000000,
+  "data": {
+    "workId": "w-perfect-days",
+    "day": "2026-10-02",
+    "line": "Thought about /Perfect Days on the walk home.",
+    "feelings": [
+      {
+        "w": "wistful",
+        "family": "sadness"
+      }
+    ]
+  }
+}

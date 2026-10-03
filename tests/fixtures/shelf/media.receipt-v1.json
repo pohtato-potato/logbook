@@ -1,0 +1,15 @@
+{
+  "id": "media.receipt:e-19c2",
+  "format": "media.receipt",
+  "version": 1,
+  "from": "media",
+  "to": "logbook",
+  "about": {
+    "item": "e-19c2"
+  },
+  "writtenAt": 1790740000000,
+  "data": {
+    "uid": "e-19c2",
+    "workId": "lb-e-19c2"
+  }
+}

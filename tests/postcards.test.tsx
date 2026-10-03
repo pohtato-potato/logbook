@@ -1,7 +1,11 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { renderToStaticMarkup } from 'react-dom/server';
 import card from './fixtures/postcard-v1.json';
-import { parsePostcard, syncPostcards, openShelf, SHELF_DB, SHELF_VERSION } from '../src/sources/shelf';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
+import healthDay from './fixtures/shelf/health.day-v2.json';
+import mediaDay from './fixtures/shelf/media.day-v1.json';
+import { parsePostcard, syncPostcards } from '../src/sources/shelf';
+import { openShelf, SHELF_DB, SHELF_VERSION } from '../src/shelf/shelf';
 import { openDb, type LogbookDb } from '../src/db/db';
 import { PostcardView } from '../src/screens/Postcard';
 import { TodayView } from '../src/screens/Today';
@@ -15,16 +19,26 @@ describe('the postcard contract (v1)', () => {
     expect(parsePostcard({ ...card, steps: -5 })).toBeNull(); expect(parsePostcard({ ...card, rings: { workout: 'x' } })).toBeNull(); expect(parsePostcard('<html>')).toBeNull();
   });
   it('missing parts are allowed as null', () => expect(parsePostcard({ ...card, workout: null, walk: null, checkin: null, steps: null })).not.toBeNull());
-  it('the shared shelf is opened at one version with one store, by both apps', () => { expect(SHELF_DB).toBe('shelf'); expect(SHELF_VERSION).toBe(1); });
+  it('the shared shelf is version 2', () => { expect(SHELF_DB).toBe('shelf'); expect(SHELF_VERSION).toBe(2); });
 });
-describe('copying postcards into Logbook', () => {
-  it('copies new ones, updates newer ones, skips bad ones', async () => {
-    await syncPostcards(db, async () => [card, { ...card, id: 'health:bad', day: 'nope' }]);
-    expect((await db.postcards.get('health:2026-09-28'))?.data).toMatchObject({ steps: 7420 });
-    await syncPostcards(db, async () => [{ ...card, steps: 8000, writtenAt: card.writtenAt + 1 }]);
-    expect((await db.postcards.get('health:2026-09-28'))?.data).toMatchObject({ steps: 8000 }); expect(await db.postcards.count()).toBe(1);
+describe('copying cards from the shelf (v2) into Logbook', () => {
+  it("Health's day (health.day v2) is kept in the shape Logbook's screens read, newest wins, broken ones skipped", async () => {
+    await syncPostcards(db, async () => [healthDay, { ...healthDay, id: 'health.day:bad', data: { ...healthDay.data, day: 'nope' } }]);
+    const row = await db.postcards.get('health:2026-09-28');
+    expect(row).toMatchObject({ app: 'health', day: '2026-09-28' }); expect(parsePostcard(row!.data)?.steps).toBe(7420);
+    await syncPostcards(db, async () => [{ ...healthDay, writtenAt: healthDay.writtenAt + 1, data: { ...healthDay.data, steps: 8000 } }]);
+    expect(parsePostcard((await db.postcards.get('health:2026-09-28'))!.data)?.steps).toBe(8000); expect(await db.postcards.count()).toBe(1);
   });
-  it('the real shelf opens and reads empty in a fresh browser', async () => { const s = await openShelf(); expect(s.objectStoreNames.contains('postcards')).toBe(true); s.close(); });
+  it("Media's day (media.day v1) is kept beside it", async () => {
+    await syncPostcards(db, async () => [mediaDay]);
+    const row = await db.postcards.get('media:2026-10-02');
+    expect(row).toMatchObject({ app: 'media', day: '2026-10-02' }); expect((row!.data as { items: unknown[] }).items).toHaveLength(2);
+  });
+  it('the real shelf opens at version 2 with its cards store in a fresh browser', async () => { const s = await openShelf(); expect(s.objectStoreNames.contains('cards')).toBe(true); expect(s.objectStoreNames.contains('postcards')).toBe(false); s.close(); });
+  it.skipIf(!existsSync('../Suite/shelf'))("Logbook's copies of the contract and fixtures are byte-identical to the suite's", () => {
+    expect(readFileSync('src/shelf/shelf.ts', 'utf8')).toBe(readFileSync('../Suite/shelf/shelf.ts', 'utf8'));
+    for (const f of readdirSync('tests/fixtures/shelf')) expect(readFileSync(`tests/fixtures/shelf/${f}`, 'utf8')).toBe(readFileSync(`../Suite/shelf/fixtures/${f}`, 'utf8'));
+  });
 });
 describe('the postcard on Today', () => {
   it('draws Health’s rings with words, and its line', () => {
