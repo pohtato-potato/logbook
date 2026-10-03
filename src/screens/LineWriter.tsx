@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState, type KeyboardEvent, type MutableRefObject } from 'react';
 import { db } from '../db/db';
 import { keepLine, StorageFullError } from '../db/actions';
-import { removeFeelingToken, restoreDraft, tokenize, tokenAt } from '../domain/line';
+import { feelingsOf, removeFeelingToken, restoreDraft, tokenize, tokenAt } from '../domain/line';
+import { cardsFor, putCards } from '../shelf/shelf';
+import { catalogueWorks, mentionCards, workSuggestions, type CatalogueWork } from '../shelf/media';
 import { feelingOf, searchFeelings, FAMILY_NAME, type Family } from '../vocab/vocab';
 import { palette, PERSON_THREADS } from '../domain/colour';
 import { MarkChip } from '../ui/Chips';
@@ -30,6 +32,9 @@ export function LineWriter({ own, people, tags, onOpenFeeling, removerRef }: { o
   const [sugg, setSugg] = useState<{ items: Sugg[]; start: number } | null>(null);
   const [error, setError] = useState('');
   const ta = useRef<HTMLTextAreaElement>(null), undo = useUndo(), { pal } = useLook();
+  // Media's catalogue, for / (films, books and shows live in Media now). Empty when Media hasn't left one.
+  const [works, setWorks] = useState<CatalogueWork[]>([]);
+  useEffect(() => { void cardsFor('logbook', 'media.catalogue').then(r => setWorks(catalogueWorks(r))).catch(() => {}); }, []);
   useEffect(() => { try { sessionStorage.setItem('logbook-draft', text); } catch { /* private mode: the draft just isn't remembered */ } }, [text]);
   const current = useRef(text); current.current = text;
   if (removerRef) removerRef.current = word => {
@@ -37,11 +42,12 @@ export function LineWriter({ own, people, tags, onOpenFeeling, removerRef }: { o
     undo.show({ label: 'Removed', run: async () => { if (done) return; done = true; const back = restoreDraft({ before, after, current: current.current }); if (back !== null) setText(back); } }, `Removed ${word} from your line.`);
   };
   const suggest = (value: string, caret: number) => {
-    const m = value.slice(0, caret).match(/(^|\s)([#@:])([\p{L}\p{N}_'-]*)$/u);
+    const m = value.slice(0, caret).match(/(^|\s)([#@:/])([\p{L}\p{N}_'-]*)$/u);
     if (!m) return setSugg(null);
     const q = m[3].toLowerCase(), start = caret - m[3].length - 1;
     let items: Sugg[] = [];
     if (m[2] === '#') { items = tags.filter(t => t.startsWith(q)).slice(0, 5).map(t => ({ label: '#' + t, insert: '#' + t, note: '' })); if (q && !tags.includes(q)) items.push({ label: `Make a new tag, #${q}`, insert: '#' + q, note: '' }); }
+    else if (m[2] === '/') items = workSuggestions(q, works).map(w => ({ label: '/' + w.title, insert: '/' + w.title, note: `in Media${w.year ? `, ${w.year}` : ''}` }));
     else if (m[2] === '@') items = people.filter(p => p.initial.toLowerCase().startsWith(q)).map(p => ({ label: `@${p.initial}, ${p.name}`, insert: '@' + p.initial, note: '' }));
     else items = (q ? searchFeelings(q, own, 6) : STARTERS.map(w => ({ w, family: feelingOf(w, own)!.family, note: '', kind: 'atlas' as const })))
       .map(h => ({ label: h.w, insert: ':' + h.w.replace(/ /g, '-'), note: FAMILY_NAME[h.family] + (h.note.startsWith('means') ? ', ' + h.note : ''), family: h.family }));
@@ -58,6 +64,8 @@ export function LineWriter({ own, people, tags, onOpenFeeling, removerRef }: { o
     if (!text.trim() || busy.current) return; setError(''); busy.current = true;
     try {
       const r = await keepLine(db, { text, marks, at: new Date() }, own);
+      // A line that names a work with / goes to that work in Media too (a logbook.mention card).
+      try { const e = await db.entries.get(r.entryId); const cards = mentionCards(text.trim(), works, feelingsOf(text, own), e?.day ?? '', e?.uid ?? String(r.entryId)); if (cards.length && e) await putCards(cards); } catch { /* the line is kept either way */ }
       setText(''); setMarks({}); try { sessionStorage.removeItem('logbook-draft'); } catch { /* ignore */ }
       const added = r.momentId ? ' Your feelings were added to your inner weather.' : '';
       undo.show(r.undo, `Kept.${added}${r.skipped.length ? ` ${r.skipped.join(', ')} was already there from the last hour.` : ''}`);
@@ -91,7 +99,7 @@ export function LineWriter({ own, people, tags, onOpenFeeling, removerRef }: { o
       {sugg && <div className="sugg">{sugg.items.map((s, i) => <button key={i + s.insert} type="button" onMouseDown={e => e.preventDefault()} onClick={() => apply(s)}>
         {s.family ? <i className="sdot" style={{ background: pal[s.family] }} /> : <i className="sdot ring" />}<span>{s.label}{s.note && <small>{s.note}</small>}</span></button>)}</div>}
     </div>
-    <p className="hint" id="h-hint">Type # for a tag, @ for a person, : for a feeling. Tap a feeling to see its card.</p>
+    <p className="hint" id="h-hint">Type # for a tag, @ for a person, : for a feeling, / for a film, book or show in Media. Tap a feeling to see its card.</p>
     <div className="marks" role="group" aria-label="Marks for this entry">
       {(['first', 'gift', 'priv', 'quiet'] as const).map(k => <MarkChip key={k} kind={k} on={!!marks[k]} onToggle={() => setMarks({ ...marks, [k]: !marks[k] })} />)}
     </div>
