@@ -12,7 +12,7 @@ beforeEach(async () => { db = openDb('exp-' + n++); await db.open(); });
 describe('Markdown', () => {
   it('writes a readable day with front matter, times, words and marks', () => {
     const md = dayToMarkdown('2026-09-29', { day: '2026-09-29', overall: { word: 'close', family: 'warm', strength: 4, set: true } },
-      [{ id: 1, day: '2026-09-29', at: new Date('2026-09-29T23:24:00').getTime(), tz: 'Asia/Kolkata', kind: 'line', text: 'A "quoted" line: with --- dashes #walk :calm', marks: { first: true, priv: true }, tags: ['walk'], people: [], writtenAt: 0 }],
+      [{ id: 1, day: '2026-09-29', at: new Date('2026-09-29T23:24:00+05:30').getTime(), tz: 'Asia/Kolkata', kind: 'line', text: 'A "quoted" line: with --- dashes #walk :calm', marks: { first: true, priv: true }, tags: ['walk'], people: [], writtenAt: 0 }],
       [{ id: 1, day: '2026-09-29', at: new Date('2026-09-29T23:24:00').getTime(), word: 'calm', family: 'calm', strength: 3 }]);
     expect(md).toContain('---\ndate: 2026-09-29\n');
     expect(md).toContain('overall: "close (Warm, Sunset glow)"');
