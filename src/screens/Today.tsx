@@ -21,6 +21,7 @@ import { driveDue } from '../sources/drive';
 import { runSync, syncDue, syncMessage } from '../ui/syncNow';
 import { chooseFromGooglePhotos, googlePhotosReady } from '../ui/googlePhotos';
 import { syncPostcards, type Postcard } from '../sources/shelf';
+import { MediaMove } from './MediaMove';
 import { addDays } from '../domain/day';
 import { OutsideLine, StampsPanelView, type StampsProps } from './Stamps';
 import { useStamps } from '../ui/useStamps';
@@ -111,7 +112,7 @@ export function Today() {
       onPotd={async id => { try { undo.show(await setPhotoOfDay(db, day, id), 'That’s the photo of the day now.'); } catch (e) { undo.fail(e); } }} onPhotoMenu={setPhotoMenu}
       foldedOpen={open} onToggleFold={() => setOpen(!open)} onConfirmOverall={async () => { if (suggested) try { undo.show(await confirmOverall(db, day, suggested), `The day overall is ${FAMILY_NAME[suggested.family].toLowerCase()}.`); } catch (e) { undo.fail(e); } }}
       onChangeOverall={() => go({ name: 'feel', when: 'day' })} onOpenFeeling={(word, src) => setCard({ word, src })} onEntryMenu={setMenu}
-      writer={<LineWriter own={data.own} people={data.people} tags={visibleTags(data.tags, data.all, privacy.locked)} removerRef={remover} onOpenFeeling={w => setCard({ word: w, src: { kind: 'draft' } })} />} />
+      writer={<><MediaMove /><LineWriter own={data.own} people={data.people} tags={visibleTags(data.tags, data.all, privacy.locked)} removerRef={remover} onOpenFeeling={w => setCard({ word: w, src: { kind: 'draft' } })} /></>} />
     {card && <FeelingCard word={card.word} src={card.src} own={data.own} onClose={() => setCard(null)} onRemoveFromDraft={w => remover.current?.(w)} />}
     {menu != null && <EntryMenu id={menu} onClose={() => setMenu(null)} />}
     {photoMenu != null && <Sheet label="This photo" onClose={() => setPhotoMenu(null)}><p className="tdate sm">This photo</p><div className="btnrow col">
