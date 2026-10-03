@@ -27,12 +27,12 @@ export type DayStamps = { where?: { lat: number; lon: number }; weather?: { code
 export type SongStamp = { artist: string; track: string; plays: number; final: boolean; at: number };
 /* A finished week's most-played track, Monday to Sunday (plays 0 when nothing was played). */
 export type WeekSong = { week: string; artist: string; track: string; plays: number } & Synced;
-export type DayRow = { day: string; overall?: { word: string; family: Family; strength: number; set: boolean }; grateful?: string; potd?: number; stamps?: DayStamps; headline?: string; userAt?: number } & Synced;
+export type DayRow = { day: string; overall?: { word: string; family: Family; strength: number; set: boolean }; grateful?: string; potd?: number; stamps?: DayStamps; headline?: string; fieldAt?: Partial<Record<'overall' | 'grateful' | 'headline' | 'potd', number>> } & Synced;
 export type Person = { id: string; initial: string; name: string; thread: number; birthday?: string } & Synced;
 export type OwnWord = { word: string; family: Family; created: number } & Synced;
 export type Sources = { weather: boolean; places: boolean; songs?: boolean; drive?: boolean; photos?: boolean; sync?: boolean };
 /* This device's side of sync: its own id, where it got to in each other device's file, and when it last synced. */
-export type SyncState = { device: string; cursors: Record<string, string>; labels?: Record<string, string>; last?: number; with?: string[] };
+export type SyncState = { device: string; cursors: Record<string, string>; labels?: Record<string, string>; last?: number; with?: string[]; pushed?: string };
 /* What the private starter file brings for the linked sources. Never in the repo. */
 export type Links = { lastfm: string[]; lastfmKey?: string; googleClientId?: string };
 export type Settings = { id: 'main'; voice: number; dayStyle: 'bloom' | 'score'; theme: 'dark' | 'light'; motion: 'still' | 'gentle' | 'lively'; homes: { name: string; lat: number; lon: number; from: string; to?: string }[]; starterLoaded: boolean; lastExport?: number; lastDrive?: number; sync?: SyncState; sources?: Sources; links?: Links; lock?: { credentialId: string; createdAt: number; userId?: string } };

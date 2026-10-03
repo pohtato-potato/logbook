@@ -52,5 +52,5 @@ export async function addWhereToday(db: LogbookDb, day: string, pos: { lat: numb
   const before = await db.days.get(day), cur = before ?? { day }, stamps: DayStamps = { ...cur.stamps, where: { lat: r3(pos.lat), lon: r3(pos.lon) } };
   delete stamps.weather; delete stamps.air;
   await db.days.put({ ...cur, stamps });
-  return once('Added where you are', async () => { if (before) await db.days.put(before); else await db.days.delete(day); });
+  return once('Added where you are', async () => { if (before) await db.days.put(before); else await db.days.update(day, { 'stamps.where': undefined }); });
 }

@@ -46,7 +46,7 @@ export async function keepMoment(db: LogbookDb, d: MomentDraft & { at: Date }) {
 async function writeOverall(db: LogbookDb, day: string, overall: { word: string; family: Family; strength: number }): Promise<Undo> {
   const before = await db.days.get(day);
   await guard(() => db.days.put({ ...(before ?? { day }), overall: { ...overall, set: true } }));
-  return once('The day overall', async () => { if (before) await db.days.put(before); else await db.days.delete(day); });
+  return once('The day overall', async () => { if (before) await db.days.put(before); else await db.days.update(day, { overall: undefined }); }); // the row stays: another device may have filled it
 }
 export const setOverall = writeOverall;
 export const confirmOverall = writeOverall;
@@ -118,7 +118,7 @@ export async function setPhotoOfDay(db: LogbookDb, day: string, photoId: number 
   const before = await db.days.get(day), next = { ...(before ?? { day }) };
   if (photoId == null) delete next.potd; else next.potd = photoId;
   await guard(() => db.days.put(next));
-  return once('Photo of the day', async () => { if (before) await db.days.put(before); else await db.days.delete(day); });
+  return once('Photo of the day', async () => { if (before) await db.days.put(before); else await db.days.update(day, { potd: undefined }); });
 }
 export async function setPersonThread(db: LogbookDb, id: string, thread: number) { await guard(() => db.people.update(id, { thread })); }
 /* A place and its visit in one write: a new place is created, a known one (same name) gains a visit and, if it had none, the position.
@@ -148,5 +148,5 @@ export async function setHeadline(db: LogbookDb, sunday: string, text: string): 
   const before = await db.days.get(sunday), next = { ...(before ?? { day: sunday }) }, line = text.trim();
   if (line) next.headline = line; else delete next.headline;
   await guard(() => db.days.put(next));
-  return once('This week in a line', async () => { if (before) await db.days.put(before); else await db.days.delete(sunday); });
+  return once('This week in a line', async () => { if (before) await db.days.put(before); else await db.days.update(sunday, { headline: undefined }); });
 }

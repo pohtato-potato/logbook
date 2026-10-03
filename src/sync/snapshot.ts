@@ -1,5 +1,5 @@
 import type { LogbookDb } from '../db/db';
-import { DAY_USER_FIELDS, REMOTE, SYNC_TABLES, isAuto, quietDeletes, uidFor, type SyncTable, type Tombstone } from '../db/syncMeta';
+import { DAY_USER_FIELDS, REMOTE, SYNC_TABLES, isAuto, quietDeletes, seeTime, uidFor, type SyncTable, type Tombstone } from '../db/syncMeta';
 
 /* One device's whole Logbook as it travels through Drive: every synced record (local numbers swapped for uids, files for
    file names) and every delete it knows about. Settings never travel: they are this device's own (the lock is tied to it). */
@@ -40,7 +40,8 @@ export async function makeSnapshot(db: LogbookDb, device: string, label: string,
 
 const newer = (a: Rec, b?: Rec) => !b || Number(a.updatedAt ?? 0) > Number(b.updatedAt ?? 0);
 /* Merges another device's snapshot: per record, the newest edit wins; a delete wins over anything older than it.
-   A record whose file can't be fetched (or whose linked record isn't here) waits for the next sync instead of arriving half. */
+   A record whose file can't be fetched yet (a photo, a voice note, or something that points at a photo still on its way)
+   waits for the next sync instead of arriving half. A link to something deleted, or gone, is dropped instead: that can't heal. */
 export async function mergeSnapshot(db: LogbookDb, snap: Snapshot, getBlob: (name: string) => Promise<Blob | null>): Promise<Merged> {
   if (snap?.format !== 'logbook-sync' || snap.version !== 1) throw Object.assign(new Error('A sync file from a newer Logbook was found. Update Logbook on this device to sync.'), { name: 'PlainMessage' });
   const res: Merged = { added: 0, changed: 0, removed: 0, waiting: 0 };
@@ -48,25 +49,29 @@ export async function mergeSnapshot(db: LogbookDb, snap: Snapshot, getBlob: (nam
   const local = async (t: SyncTable, uid: string) => (isAuto(t) ? await db.table(t).where('uid').equals(uid).first() : await db.table(t).get(uid)) as Rec | undefined;
   const localId = async (t: 'places' | 'spans' | 'photos' | 'entries', uid: unknown) => (uid ? ((await db.table(t).where('uid').equals(String(uid)).first()) as Rec | undefined)?.id as number | undefined : undefined);
   let placesTouched = false;
+  // What the other device holds, so a link to a record still on its way (waiting) can be told from a link to one that's gone.
+  const sent = new Map(ORDER.map(t => [t, new Set((snap.records[t] ?? []).map(r => (isAuto(t) ? String(r.uid ?? '') : uidFor(t, r))))]));
+  const pending = (t: SyncTable, uid: unknown) => !!uid && sent.get(t)!.has(String(uid)) && (deadAt.get(`${t}:${uid}`) ?? -1) < 0;
+  for (const tb of snap.tombstones ?? []) seeTime(tb.at);
   for (const t of ORDER) {
     for (const r of snap.records[t] ?? []) {
+      seeTime(r.updatedAt);
       const uid = isAuto(t) ? String(r.uid ?? '') : uidFor(t, r); if (!uid) continue;
       if ((deadAt.get(`${t}:${uid}`) ?? -1) >= Number(r.updatedAt ?? 0)) continue; // deleted here after that edit
       const l = await local(t, uid), x: Rec = { ...r };
-      if (t === 'days' && l) { const m = await mergeDay(db, l, x); if (m) { await db.days.put({ ...m, [REMOTE]: true } as never); res.changed++; } continue; }
+      if (t === 'days') { const m = await mergeDay(db, l ?? { day: x.day }, x); if (m.waiting) res.waiting++; if (m.row) { await db.days.put({ ...m.row, [REMOTE]: true } as never); if (l) res.changed++; else res.added++; } continue; }
       if (!newer(x, l)) continue;
       // Local numbers for what this record points at; files fetched. Anything missing: wait.
       let ok = true;
       if (t === 'entries' && x.data) {
         const d = { ...(x.data as Rec) };
-        if (d.kind === 'place') { const id = await localId('places', d.placeUid); if (id == null) ok = false; else { d.placeId = id; delete d.placeUid; } }
-        if (d.kind === 'span') { const id = await localId('spans', d.spanUid); if (id == null) ok = false; else { d.spanId = id; delete d.spanUid; } }
-        if (d.kind === 'keep' && d.photoUid) { const id = await localId('photos', d.photoUid); if (id == null) ok = false; else { d.photoId = id; delete d.photoUid; } }
+        if (d.kind === 'place') { d.placeId = (await localId('places', d.placeUid)) ?? -1; delete d.placeUid; } // a place that's gone: kept as "a place that was removed"
+        if (d.kind === 'span') { d.spanId = (await localId('spans', d.spanUid)) ?? -1; delete d.spanUid; }
+        if (d.kind === 'keep' && d.photoUid) { const id = await localId('photos', d.photoUid); if (id != null) d.photoId = id; else if (pending('photos', d.photoUid)) ok = false; else delete d.photoId; delete d.photoUid; }
         if (d.kind === 'voice') { const b = await getBlob(String(d.audioFile)); if (!b) ok = false; else { d.audio = b; delete d.audioFile; } }
         x.data = d;
       }
-      if (t === 'moments' && x.entryUid) { const id = await localId('entries', x.entryUid); if (id == null) ok = false; else { x.entryId = id; delete x.entryUid; } }
-      if (t === 'days' && x.potdUid) { const id = await localId('photos', x.potdUid); if (id != null) x.potd = id; delete x.potdUid; }
+      if (t === 'moments' && x.entryUid) { const id = await localId('entries', x.entryUid); if (id != null) { x.entryId = id; delete x.entryUid; } else if (pending('entries', x.entryUid)) ok = false; else continue; }
       if (t === 'photos') { const [b, th] = await Promise.all([getBlob(fileName('photo', uid)), getBlob(fileName('thumb', uid))]); if (!b || !th) ok = false; else { x.blob = b; x.thumb = th; } }
       if (!ok) { res.waiting++; continue; }
       await db.table(t).put({ ...x, ...(l && isAuto(t) ? { id: l.id } : {}), [REMOTE]: true });
@@ -84,20 +89,25 @@ export async function mergeSnapshot(db: LogbookDb, snap: Snapshot, getBlob: (nam
   if (placesTouched) await recountVisits(db);
   return res;
 }
-/* A day merged by part: the owner's fields from whichever device changed them last, stamps from both (weather can be fetched again). */
-async function mergeDay(db: LogbookDb, l: Rec, r: Rec): Promise<Rec | null> {
-  const userR = Number(r.userAt ?? 0) > Number(l.userAt ?? 0), stampsR = newer(r, l);
-  if (!userR && !stampsR) return null;
-  const out: Rec = { ...l };
-  if (userR) {
-    for (const f of DAY_USER_FIELDS) { if (f === 'potd') continue; if (r[f] === undefined) delete out[f]; else out[f] = r[f]; }
-    const pid = r.potdUid ? ((await db.photos.where('uid').equals(String(r.potdUid)).first())?.id) : undefined;
-    if (pid != null) out.potd = pid; else delete out.potd;
-    out.userAt = r.userAt;
+/* A day merged field by field: each of the owner's fields (overall, grateful, headline, photo of the day) from whichever
+   device changed it last; stamps from both (weather can be fetched again). A photo of the day whose photo hasn't arrived waits. */
+async function mergeDay(db: LogbookDb, l: Rec, r: Rec): Promise<{ row: Rec | null; waiting: boolean }> {
+  const out: Rec = { ...l }, lf = { ...(l.fieldAt as Rec) }, rf = (r.fieldAt as Rec) ?? {};
+  let changed = false, waiting = false;
+  for (const f of DAY_USER_FIELDS) {
+    if (Number(rf[f] ?? 0) <= Number(lf[f] ?? 0)) continue;
+    if (f === 'potd') {
+      if (r.potdUid) { const id = (await db.photos.where('uid').equals(String(r.potdUid)).first())?.id; if (id == null) { waiting = true; continue; } out.potd = id; }
+      else delete out.potd;
+    } else if (r[f] === undefined) delete out[f]; else out[f] = r[f];
+    lf[f] = rf[f]; changed = true;
   }
-  out.stamps = stampsR ? { ...(l.stamps as Rec), ...(r.stamps as Rec) } : { ...(r.stamps as Rec), ...(l.stamps as Rec) };
-  out.updatedAt = Math.max(Number(l.updatedAt ?? 0), Number(r.updatedAt ?? 0));
-  return out;
+  if (Number(r.updatedAt ?? 0) > Number(l.updatedAt ?? 0)) { out.stamps = { ...(l.stamps as Rec), ...(r.stamps as Rec) }; changed = true; }
+  else if (r.stamps && !l.stamps) { out.stamps = r.stamps; changed = true; }
+  if (!changed) return { row: null, waiting };
+  out.fieldAt = lf; out.updatedAt = Math.max(Number(l.updatedAt ?? 0), Number(r.updatedAt ?? 0));
+  delete out.potdUid;
+  return { row: out, waiting };
 }
 /* How often each place was visited is counted from the visits themselves, so the two devices agree. */
 async function recountVisits(db: LogbookDb) {

@@ -52,7 +52,7 @@ describe('almanac tabs', () => {
     const db = openDb('hl-1'); await db.open();
     const u = await setHeadline(db, '2026-09-27', ' A deadline, then the long walk home. ');
     expect((await db.days.get('2026-09-27'))?.headline).toBe('A deadline, then the long walk home.');
-    await u.run(); expect(await db.days.get('2026-09-27')).toBeUndefined();
+    await u.run(); expect((await db.days.get('2026-09-27'))?.headline).toBeUndefined(); // the row stays: another device may have filled it
   });
 });
 

@@ -10,18 +10,21 @@ import { OfflineError, type AuthCall, type AuthSend } from './http';
    Logbook can only see the files it made itself; the rest of the Drive stays out of reach. */
 const API = 'https://www.googleapis.com/drive/v3/files', UP = 'https://www.googleapis.com/upload/drive/v3/files', FOLDER = 'application/vnd.google-apps.folder';
 export const CHUNK_SIZE = 4 * 1024 * 1024;
-export const find = async (call: AuthCall, q: string) => ((await call(`${API}?${new URLSearchParams({ q, fields: 'files(id,name)', spaces: 'drive' })}`)) as { files?: { id: string }[] }).files?.[0]?.id;
+/* The oldest match, so two devices that both made a folder at once still settle on the same one. */
+export const find = async (call: AuthCall, q: string) => ((await call(`${API}?${new URLSearchParams({ q, fields: 'files(id,name)', spaces: 'drive', orderBy: 'createdTime' })}`)) as { files?: { id: string }[] }).files?.[0]?.id;
 /* A folder Logbook made ("Logbook" at the top, or one inside it), made if it isn't there yet. */
 export async function folder(call: AuthCall, name = 'Logbook', parent?: string): Promise<string> {
   const have = await find(call, `name='${name}' and mimeType='${FOLDER}'${parent ? ` and '${parent}' in parents` : ''} and trashed=false`); if (have) return have;
-  return ((await call(API, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, mimeType: FOLDER, ...(parent ? { parents: [parent] } : {}) }) })) as { id: string }).id;
+  const made = ((await call(API, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, mimeType: FOLDER, ...(parent ? { parents: [parent] } : {}) }) })) as { id: string }).id;
+  return (await find(call, `name='${name}' and mimeType='${FOLDER}'${parent ? ` and '${parent}' in parents` : ''} and trashed=false`)) ?? made; // another device may have made one a moment earlier
 }
 /* Every file in a folder, with when it last changed (followed across pages). */
 export async function listFolder(call: AuthCall, parent: string): Promise<Map<string, { id: string; modifiedTime: string }>> {
   const out = new Map<string, { id: string; modifiedTime: string }>(); let page = '';
   do {
     const r = (await call(`${API}?${new URLSearchParams({ q: `'${parent}' in parents and trashed=false`, fields: 'nextPageToken,files(id,name,modifiedTime)', pageSize: '1000', spaces: 'drive', ...(page ? { pageToken: page } : {}) })}`)) as { files?: { id: string; name: string; modifiedTime: string }[]; nextPageToken?: string };
-    for (const f of r.files ?? []) out.set(f.name, { id: f.id, modifiedTime: f.modifiedTime }); page = r.nextPageToken ?? '';
+    for (const f of r.files ?? []) { const had = out.get(f.name); if (!had || f.modifiedTime > had.modifiedTime) out.set(f.name, { id: f.id, modifiedTime: f.modifiedTime }); } // two files of one name: the newest
+    page = r.nextPageToken ?? '';
   } while (page);
   return out;
 }

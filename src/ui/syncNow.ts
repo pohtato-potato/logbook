@@ -18,11 +18,13 @@ export function syncMessage(r: SyncResult): string {
 /* A day without a sync, on a device where sync is set up and on. */
 export const syncDue = (s: Settings, now = new Date()) => syncReady(s) && (!s.sync?.last || now.getTime() - s.sync.last > 24 * 3600_000);
 let running: Promise<SyncResult | null> | null = null;
-/* One sync at a time. Asked for (a tap): signs in if needed. Automatic: only while this session already has a Google token, and silent. */
-export function runSync(asked: boolean): Promise<SyncResult | null> {
-  if (running) return running;
+/* One sync at a time. Asked for (a tap): unlocks first if the lock is on (private entries leave only after an unlock), and
+   signs in if needed. Automatic: never while locked, only while this session already has a Google token, and silent. */
+export async function runSync(asked: boolean, o: { locked?: boolean; unlock?: () => Promise<boolean> } = {}): Promise<SyncResult | null> {
+  if (o.locked && (!asked || !(await o.unlock?.()))) return null;
+  if (running) { if (!asked) return running; await running.catch(() => null); }
   running = (async () => {
-    const s = await getSettings(db); if (!syncReady(s)) return null;
+    const s = await getSettings(db); if (!syncReady(s)) { if (asked) throw Object.assign(new Error('Sync is switched off or not set up, so nothing was synced.'), { name: 'PlainMessage' }); return null; }
     const t = token([DRIVE_SCOPE]) ?? (asked ? await signIn(s.links!.googleClientId!, [DRIVE_SCOPE]) : null);
     if (!t) { if (asked) throw Object.assign(new Error('Sign-in didn’t finish, so nothing was synced.'), { name: 'PlainMessage' }); return null; }
     return syncWithDrive(db, { call: authCall(t), send: authSend(t) }, { label: deviceLabel() });

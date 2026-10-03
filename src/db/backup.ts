@@ -1,4 +1,5 @@
 import { guard } from './actions';
+import { syncQuiet } from './syncMeta';
 import type { LogbookDb } from './db';
 import { makeZip, readZip } from '../domain/zip';
 
@@ -34,9 +35,14 @@ export async function restoreBackup(db: LogbookDb, data: unknown): Promise<void>
   if (!b || b.format !== 'logbook-backup' || b.version !== 1 || typeof b.tables !== 'object' || !b.tables) throw new BackupError(NOT_BACKUP);
   const tables = b.tables;
   if (TABLES.some(t => !OPTIONAL.has(t) && !Array.isArray(tables[t]))) throw new BackupError('This backup isn’t complete. Nothing was changed.');
-  await guard(() => db.transaction('rw', TABLES.map(t => db.table(t)), async () => {
+  // Quiet for sync: restored rows keep their saved times and clearing leaves no tombstones, so other devices lose nothing.
+  // This device keeps its own sync identity and lock (both belong to the device, not the archive), and reads every other device again.
+  const own = await db.settings.get('main');
+  await syncQuiet(() => guard(() => db.transaction('rw', TABLES.map(t => db.table(t)), async () => {
     for (const t of TABLES) { await db.table(t).clear(); const rows = tables[t]; if (Array.isArray(rows) && rows.length) await db.table(t).bulkPut(unpack(rows) as unknown[]); }
-  }));
+    const s = await db.settings.get('main');
+    if (s) { const { sync: _s, lock: _l, ...rest } = s; await db.settings.put({ ...rest, ...(own?.lock ? { lock: own.lock } : {}), ...(own?.sync ? { sync: { device: own.sync.device, cursors: {} } } : {}) }); }
+  })));
 }
 
 /* The backup file: a zip holding backup.json, with every photo and voice note as its own file beside it (blobs/N).

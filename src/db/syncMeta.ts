@@ -12,10 +12,13 @@ export const KEY_TABLES = { days: 'day', people: 'id', words: 'word', tags: 'nam
 export type SyncTable = (typeof AUTO_TABLES)[number] | keyof typeof KEY_TABLES;
 export const SYNC_TABLES: SyncTable[] = [...AUTO_TABLES, ...(Object.keys(KEY_TABLES) as (keyof typeof KEY_TABLES)[])];
 export const DAY_USER_FIELDS = ['overall', 'grateful', 'headline', 'potd'] as const;
+export type DayField = (typeof DAY_USER_FIELDS)[number];
+/* Tables whose deletes don't travel: a day row is a container (its fields carry their own times), a tag is shared by entries. */
+const NO_TOMBSTONES = new Set<string>(['days', 'tags']);
 export type Tombstone = { id: string; table: SyncTable; uid: string; at: number };
 
 /* A short, stable hash (cyrb53), as hex. */
-function hash(s: string): string {
+export function hash(s: string): string {
   let h1 = 0xdeadbeef, h2 = 0x41c6ce57;
   for (let i = 0; i < s.length; i++) { const c = s.charCodeAt(i); h1 = Math.imul(h1 ^ c, 2654435761); h2 = Math.imul(h2 ^ c, 1597334677); }
   h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507) ^ Math.imul(h2 ^ (h2 >>> 13), 3266489909);
@@ -24,9 +27,11 @@ function hash(s: string): string {
 }
 type R = Record<string, unknown>;
 const seed: Record<(typeof AUTO_TABLES)[number], (r: R) => string> = {
-  entries: r => `${r.day}|${r.at}|${r.kind}|${r.text}`,
-  moments: r => `${r.day}|${r.at}|${r.word}`,
-  places: r => String(r.name ?? '').trim().toLowerCase(),
+  // Only what never changes after a record is made, so an edited copy on another device still matches.
+  entries: r => `${r.day}|${r.at}|${r.writtenAt}|${r.kind}`,
+  moments: r => `${r.day}|${r.at}`,
+  // A place is its name and, when known, its position (to about 100 m): two different "Home"s stay two.
+  places: r => `${String(r.name ?? '').trim().toLowerCase()}${typeof r.lat === 'number' && typeof r.lon === 'number' ? `@${(r.lat as number).toFixed(3)},${(r.lon as number).toFixed(3)}` : ''}`,
   spans: r => `${r.name}|${r.from}`,
   photos: r => `${r.day}|${r.addedAt}`,
 };
@@ -43,8 +48,16 @@ export const quietDeletes = new Set<string>();
 let listener: (() => void) | null = null;
 /* Called (at most once per change) after the owner changes anything synced on this device. */
 export const onLocalChange = (fn: (() => void) | null) => { listener = fn; };
-let clock = 0;
+/* This device's clock for edits: never behind any time it has seen from another device, so an edit made after seeing a
+   fast-clocked device's edit still counts as the newer one. Kept across restarts. */
+const CLOCK = 'logbook-sync-clock';
+let clock = (() => { try { return Number(localStorage.getItem(CLOCK)) || 0; } catch { return 0; } })();
 const now = () => (clock = Math.max(Date.now(), clock + 1));
+export function seeTime(t: unknown) { const n = Number(t); if (Number.isFinite(n) && n > clock) { clock = n; try { localStorage.setItem(CLOCK, String(n)); } catch { /* kept for this session */ } } }
+/* Restoring a backup: rows keep the times they were saved with and clearing leaves no tombstones, so a restore never
+   counts as a fresh edit or delete on the other devices. */
+let quiet = 0;
+export async function syncQuiet<T>(fn: () => Promise<T>): Promise<T> { quiet++; try { return await fn(); } finally { quiet--; } }
 const after = (trans: Transaction, fn: () => void) => trans.on('complete', fn);
 
 export function installSyncHooks(db: Dexie) {
@@ -52,26 +65,27 @@ export function installSyncHooks(db: Dexie) {
   for (const name of SYNC_TABLES) {
     const t = db.table(name);
     t.hook('creating', function (_pk, obj: R, trans) {
-      const remote = !!obj[REMOTE]; delete obj[REMOTE];
+      const remote = !!obj[REMOTE] || quiet > 0; delete obj[REMOTE];
       if (isAuto(name) && !obj.uid) obj.uid = uidFor(name, obj);
-      if (!remote) {
-        obj.updatedAt = now();
-        if (name === 'days' && DAY_USER_FIELDS.some(f => obj[f] !== undefined)) obj.userAt = obj.updatedAt;
-        listener?.();
-      }
+      if (remote) { if (obj.updatedAt == null) obj.updatedAt = firstTime(obj); return; }
+      obj.updatedAt = now();
+      if (name === 'days') { const at = obj.updatedAt as number, f: R = {}; DAY_USER_FIELDS.forEach(k => { if (obj[k] !== undefined) f[k] = at; }); if (Object.keys(f).length) obj.fieldAt = { ...(obj.fieldAt as R), ...f }; }
+      listener?.();
       const id = `${name}:${isAuto(name) ? String(obj.uid) : uidFor(name, obj)}`;
       after(trans, () => { void tomb().delete(id).catch(() => {}); }); // made again (an Undo, or another device): no longer deleted
     });
-    (t.hook as unknown as (ev: 'updating', fn: (mods: R) => R) => void)('updating', function (mods: R): R {
+    (t.hook as unknown as (ev: 'updating', fn: (mods: R, pk: unknown, obj: R) => R) => void)('updating', function (mods: R, _pk: unknown, old: R): R {
       if (mods[REMOTE]) return { [REMOTE]: undefined };
+      if (quiet > 0) return {};
+      seeTime(old?.updatedAt);
       const at = now(), out: R = { updatedAt: at };
-      if (name === 'days' && Object.keys(mods).some(k => DAY_USER_FIELDS.some(f => k === f || k.startsWith(f + '.')))) out.userAt = at;
+      if (name === 'days') for (const f of DAY_USER_FIELDS) if (Object.keys(mods).some(k => k === f || k.startsWith(f + '.'))) out[`fieldAt.${f}`] = at;
       listener?.();
       return out;
     });
     t.hook('deleting', function (_pk, obj: R, trans) {
       const uid = isAuto(name) ? String(obj?.uid ?? '') : uidFor(name, obj ?? {}), id = `${name}:${uid}`;
-      if (!uid) return;
+      if (!uid || quiet > 0 || NO_TOMBSTONES.has(name)) return;
       if (quietDeletes.delete(id)) return;
       const at = now(); listener?.();
       after(trans, () => { void tomb().put({ id, table: name, uid, at }).catch(() => {}); });

@@ -27,13 +27,13 @@ import { useWide } from './ui/useWide';
 import { useKeys } from './ui/keys';
 import { PrivacyProvider } from './ui/Privacy';
 import { UpdateNotice } from './pwa';
-import { useAutoSync } from './ui/useAutoSync';
+import { AutoSync } from './ui/useAutoSync';
 
 /* The Undo notice belongs to the screen it was shown on: moving to another screen clears it. */
 function ClearUndoOnMove({ at }: { at: string }) { const { moved } = useUndo(); useEffect(() => { moved(); }, [at, moved]); return null; }
 export function App() {
   const r = useRoute(), wide = useWide();
-  useKeys(r, wide); useAutoSync();
+  useKeys(r, wide);
   const settings = useLiveQuery(() => getSettings(db), []) ?? DEFAULT_SETTINGS;
   useEffect(() => {
     const root = document.documentElement;
@@ -45,7 +45,7 @@ export function App() {
     return () => removeEventListener('resize', big);
   }, [settings.theme, settings.motion]);
   return <div id="app-root"><LookProvider value={lookOf(settings.theme)}><UndoProvider><PrivacyProvider>
-    <ClearUndoOnMove at={JSON.stringify(r)} />
+    <ClearUndoOnMove at={JSON.stringify(r)} /><AutoSync />
     {r.name === 'today' && (wide ? <Desk route={r}><Today /></Desk> : <Today />)}
     {r.name === 'cal' && <Calendar month={r.month} tab={r.tab} />}
     {r.name === 'day' && (wide ? <Desk route={r}><DayPage day={r.day} /></Desk> : <DayPage day={r.day} />)}

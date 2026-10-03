@@ -3,6 +3,7 @@ import { getSettings, saveSettings } from '../db/actions';
 import { sourcesOf } from '../db/stamps';
 import type { Settings, SyncState } from '../db/types';
 import { makeSnapshot, mergeSnapshot, type Merged, type Snapshot } from '../sync/snapshot';
+import { hash } from '../db/syncMeta';
 import { CHUNK_SIZE, download, folder, listFolder, put, type Google } from './drive';
 
 /* Sync between devices, through the owner's own Drive: a "sync" folder inside the Logbook folder holds one file per device
@@ -19,7 +20,7 @@ export async function syncWithDrive(db: LogbookDb, g: Google, o: { label: string
     if (!sourcesOf(s).sync) throw plain('Sync between devices is switched off in Settings.');
   };
   await stillOn();
-  const before = (await getSettings(db)).sync, state: SyncState = { device: before?.device ?? newDevice(), cursors: { ...before?.cursors }, labels: { ...before?.labels }, ...(before?.last ? { last: before.last } : {}) };
+  const before = (await getSettings(db)).sync, state: SyncState = { device: before?.device ?? newDevice(), cursors: { ...before?.cursors }, labels: { ...before?.labels }, ...(before?.last ? { last: before.last } : {}), ...(before?.pushed ? { pushed: before.pushed } : {}) };
   if (!before?.device) await saveSettings(db, { sync: state });
   const root = await folder(g.call), dir = await folder(g.call, 'sync', root), files = await listFolder(g.call, dir), mine = `device-${state.device}.json`;
   const total: Merged = { added: 0, changed: 0, removed: 0, waiting: 0 };
@@ -32,12 +33,14 @@ export async function syncWithDrive(db: LogbookDb, g: Google, o: { label: string
     const r = await mergeSnapshot(db, snap, blob);
     (Object.keys(total) as (keyof Merged)[]).forEach(k => (total[k] += r[k]));
     state.labels![name] = String(snap.label || 'another device');
-    if (!r.waiting) state.cursors[name] = f.modifiedTime; // anything still waiting is read again next time
+    if (!r.waiting) state.cursors[name] = f.modifiedTime; // a file still on its way: read again next time
   }
   await stillOn();
   const { snap, blobs } = await makeSnapshot(db, state.device, o.label, o.now);
-  for (const [name, get] of blobs) if (!files.has(name)) { await stillOn(); await put(g, dir, name, await get(), CHUNK_SIZE, stillOn, () => {}, null); }
-  await put(g, dir, mine, new Blob([JSON.stringify(snap)], { type: 'application/json' }), CHUNK_SIZE, stillOn, () => {}, files.get(mine)?.id ?? null);
+  for (const [name, get] of blobs) if (!files.has(name)) { await stillOn(); const b = await get(); await put(g, dir, name, b.type ? b : new Blob([b], { type: 'application/octet-stream' }), CHUNK_SIZE, stillOn, () => {}, null); }
+  // Unchanged since the last time it went up: not sent again, so the other devices have nothing to read.
+  const { at: _at, ...body } = snap, sig = hash(JSON.stringify(body));
+  if (sig !== state.pushed || !files.has(mine)) { await put(g, dir, mine, new Blob([JSON.stringify(snap)], { type: 'application/json' }), CHUNK_SIZE, stillOn, () => {}, files.get(mine)?.id ?? null); state.pushed = sig; }
   const devices = [...new Set([...files.keys()].filter(n => n !== mine && state.labels![n]).map(n => state.labels![n]))];
   await saveSettings(db, { sync: { ...state, last: o.now ?? Date.now(), with: devices } });
   return { merged: total, devices };
