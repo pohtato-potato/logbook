@@ -29,8 +29,9 @@ export function mentionsIn(text: string, works: CatalogueWork[]): CatalogueWork[
   return works.filter(w => found.includes(w));
 }
 
-/* One card per linked work. `ref` is the entry's stable id. */
-export function mentionCards(text: string, works: CatalogueWork[], feelings: { w: string; family: string }[], day: string, ref: string, now = Date.now()): Card<'logbook.mention', LogbookMention>[] {
+/* One card per linked work. `ref` is the entry's stable id. A private line never leaves Logbook. */
+export function mentionCards(text: string, works: CatalogueWork[], feelings: { w: string; family: string }[], day: string, ref: string, now = Date.now(), priv = false): Card<'logbook.mention', LogbookMention>[] {
+  if (priv) return [];
   return mentionsIn(text, works).map(w => ({ id: `logbook.mention:${ref}:${w.id}`, format: 'logbook.mention', version: 1, from: 'logbook', to: 'media', about: { item: w.id }, writtenAt: now,
     data: { workId: w.id, day, line: text.slice(0, 2000), feelings } }));
 }

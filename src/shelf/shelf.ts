@@ -18,8 +18,9 @@ export type Feeling = { w: string; family: string };
 export type MediaDay = { day: string; items: { workId: string; kind: string; title: string; did: ('noted' | 'started' | 'finished' | 'rated')[]; rating?: number; line?: string }[]; feelings: Feeling[] };
 export type MediaCatalogue = { works: { id: string; kind: string; title: string; year?: number }[] };
 export type LogbookMention = { workId: string; day: string; line: string; feelings: Feeling[] };
-export type LogbookHandover = { uid: string; day: string; at: number; media: 'Film' | 'Series' | 'Book' | 'Game' | 'Album' | 'Other'; title: string; rating: number; current: boolean; text: string };
-export type MediaReceipt = { uid: string; workId: string };
+/* rev: the entry's revision (when it last changed). A receipt names the revision Media holds, so an entry edited after it moved is moved again before Logbook lets it go. */
+export type LogbookHandover = { uid: string; rev: number; day: string; at: number; media: 'Film' | 'Series' | 'Book' | 'Game' | 'Album' | 'Other'; title: string; rating: number; current: boolean; text: string };
+export type MediaReceipt = { uid: string; rev: number; workId: string };
 export type LogbookShare = { title: string; text: string; url: string };
 export type HealthDay = {
   day: string; steps: number | null; sleepMin: number | null;
@@ -33,7 +34,9 @@ const obj = (x: unknown): x is R => !!x && typeof x === 'object' && !Array.isArr
 const str = (x: unknown, max = 2000) => typeof x === 'string' && x.length <= max;
 const num = (x: unknown, min = 0, max = Infinity) => typeof x === 'number' && Number.isFinite(x) && x >= min && x <= max;
 const isDay = (x: unknown) => typeof x === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(x);
-const feelings = (x: unknown) => Array.isArray(x) && x.length <= 50 && x.every(f => obj(f) && str(f.w, 60) && str(f.family, 30));
+/* The nine feeling families both apps draw (Logbook's vocabulary). Any other family is refused, so no reader meets a form it can't draw. */
+export const FAMILIES = ['bright', 'proud', 'curious', 'calm', 'warm', 'wistful', 'low', 'tense', 'heated'];
+const feelings = (x: unknown) => Array.isArray(x) && x.length <= 50 && x.every(f => obj(f) && str(f.w, 60) && FAMILIES.includes(f.family as string));
 const opt = (x: unknown, ok: (v: R) => boolean) => x === null || x === undefined || (obj(x) && ok(x));
 const DID = new Set(['noted', 'started', 'finished', 'rated']);
 const MEDIA = new Set(['Film', 'Series', 'Book', 'Game', 'Album', 'Other']);
@@ -46,9 +49,9 @@ export const CHECK: Record<string, (d: unknown) => boolean> = {
   'media.catalogue@1': d => obj(d) && Array.isArray(d.works) && d.works.length <= 5000
     && d.works.every(w => obj(w) && str(w.id, 100) && str(w.kind, 20) && str(w.title, 500) && (w.year === undefined || num(w.year, 0, 3000))),
   'logbook.mention@1': d => obj(d) && str(d.workId, 100) && isDay(d.day) && str(d.line) && feelings(d.feelings),
-  'logbook.handover@1': d => obj(d) && str(d.uid, 100) && isDay(d.day) && num(d.at) && MEDIA.has(d.media as string) && str(d.title, 500)
+  'logbook.handover@1': d => obj(d) && str(d.uid, 100) && num(d.rev) && isDay(d.day) && num(d.at) && MEDIA.has(d.media as string) && str(d.title, 500)
     && num(d.rating, 0, 7) && typeof d.current === 'boolean' && str(d.text, 20000),
-  'media.receipt@1': d => obj(d) && str(d.uid, 100) && str(d.workId, 100),
+  'media.receipt@1': d => obj(d) && str(d.uid, 100) && num(d.rev) && str(d.workId, 100),
   'logbook.share@1': d => obj(d) && str(d.title) && str(d.text) && str(d.url) && !!(d.title || d.text || d.url),
   'health.day@2': d => obj(d) && isDay(d.day) && (d.steps === null || num(d.steps, 0, 500_000)) && (d.sleepMin === null || num(d.sleepMin, 0, 24 * 60))
     && opt(d.workout, w => str(w.name, 200) && num(w.minutes, 0, 24 * 60)) && opt(d.checkin, c => num(c.at)) && opt(d.walk, w => num(w.km) && str(w.place, 200))

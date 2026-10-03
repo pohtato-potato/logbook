@@ -8,7 +8,8 @@ let db: LogbookDb, idb: IDBFactory, n = 0;
 beforeEach(async () => { db = openDb('ho-' + n++); await db.open(); idb = new IDBFactory(); });
 const film = (title: string, over: Partial<{ rating: number; current: boolean; text: string }> = {}) =>
   keepEntry(db, { kind: 'media', text: over.text ?? '', at: new Date('2026-09-14T21:00:00'), data: { kind: 'media', media: 'Film', title, rating: over.rating ?? 6, current: over.current ?? false } });
-const receipt = (uid: string): Card => ({ id: `media.receipt:${uid}`, format: 'media.receipt', version: 1, from: 'media', to: 'logbook', about: { item: uid }, writtenAt: 1, data: { uid, workId: `lb-${uid}` } });
+const receipt = (e: { uid?: string; updatedAt?: number; writtenAt: number }, rev = e.updatedAt ?? e.writtenAt): Card => ({ id: `media.receipt:${e.uid}`, format: 'media.receipt', version: 1, from: 'media', to: 'logbook', about: { item: e.uid! }, writtenAt: 1, data: { uid: e.uid!, rev, workId: `lb-${e.uid}` } });
+const dayCard = (day: string): Card => ({ id: `media.day:${day}`, format: 'media.day', version: 1, from: 'media', to: 'logbook', about: { day }, writtenAt: 1, data: { day, items: [], feelings: [] } });
 const mediaEntries = async () => (await db.entries.toArray()).filter(e => e.kind === 'media');
 
 describe('the hand-over to Media (spec §12, owner’s choices B and 6A)', () => {
@@ -24,9 +25,11 @@ describe('the hand-over to Media (spec §12, owner’s choices B and 6A)', () =>
     await film('A'); await film('B');
     const [a, b] = await mediaEntries();
     expect(await handoverState(db, idb)).toMatchObject({ total: 2, received: 0, ready: false });
-    await putCards([receipt(a.uid!)], idb);
+    await putCards([receipt(a)], idb);
     expect(await handoverState(db, idb)).toMatchObject({ total: 2, received: 1, ready: false });
-    await putCards([receipt(b.uid!)], idb);
+    await putCards([receipt(b)], idb);
+    expect(await handoverState(db, idb)).toMatchObject({ total: 2, received: 2, ready: false }); // Media's card for the day isn't there yet
+    await putCards([dayCard('2026-09-14')], idb);
     expect(await handoverState(db, idb)).toMatchObject({ total: 2, received: 2, ready: true });
   });
   it('the backup holds every moved entry, as JSON', async () => {
@@ -40,10 +43,36 @@ describe('the hand-over to Media (spec §12, owner’s choices B and 6A)', () =>
     await keepEntry(db, { kind: 'quote', text: 'Be kind.', at: new Date(), data: { kind: 'quote', who: 'Overheard' } });
     await writeHandovers(db, idb);
     const [a] = await mediaEntries();
-    await putCards([receipt(a.uid!)], idb);
+    await putCards([receipt(a), dayCard('2026-09-14')], idb);
     await letGo(db, idb);
     expect((await mediaEntries()).map(e => (e.data as { title: string }).title)).toEqual(['B']);
     expect(await db.entries.where('kind').equals('quote').count()).toBe(1);
     expect((await cardsFor('media', 'logbook.handover', idb)).map(c => (c as Card).id)).toEqual([`logbook.handover:${(await mediaEntries())[0].uid}`]);
+  });
+});
+
+describe('the hand-over never loses anything', () => {
+  it('an entry edited after Media’s receipt is not let go until Media holds the new version', async () => {
+    await film('A'); const [a] = await mediaEntries();
+    await putCards([receipt(a), dayCard('2026-09-14')], idb);
+    await db.entries.update(a.id!, { text: 'edited after it moved' });
+    const [edited] = await mediaEntries();
+    expect(await handoverState(db, idb)).toMatchObject({ received: 0, ready: false });
+    await letGo(db, idb); expect(await mediaEntries()).toHaveLength(1);
+    await putCards([receipt(edited)], idb);
+    expect(await handoverState(db, idb)).toMatchObject({ received: 1, ready: true });
+  });
+  it('private entries stay in Logbook: they are never handed over or let go', async () => {
+    await film('A'); await keepEntry(db, { kind: 'media', text: 'secret', marks: { priv: true }, at: new Date('2026-09-14T21:00:00'), data: { kind: 'media', media: 'Film', title: 'Private one', rating: 5, current: false } });
+    await writeHandovers(db, idb);
+    expect((await cardsFor('media', 'logbook.handover', idb)).map(c => ((c as Card).data as { title: string }).title)).toEqual(['A']);
+    expect(await handoverState(db, idb)).toMatchObject({ total: 1, private: 1 });
+  });
+  it('letting go can be undone in one step', async () => {
+    await film('A'); await film('B'); const es = await mediaEntries();
+    await putCards([...es.map(e => receipt(e)), dayCard('2026-09-14')], idb);
+    const { undo } = await letGo(db, idb);
+    expect(await mediaEntries()).toHaveLength(0);
+    await undo.run(); expect(await mediaEntries()).toHaveLength(2);
   });
 });

@@ -19,8 +19,12 @@ describe('/ links a work from Media’s catalogue', () => {
     expect(mentionsIn('no links here', works)).toEqual([]);
   });
   it('a line with a linked work leaves one logbook.mention card per work, with the line, its day and feelings', () => {
-    const cards = mentionCards('thought about /Perfect Days :wistful', works, [{ w: 'wistful', family: 'sadness' }], '2026-10-02', 'e-7', 9);
+    const cards = mentionCards('thought about /Perfect Days :wistful', works, [{ w: 'wistful', family: 'wistful' }], '2026-10-02', 'e-7', 9);
     expect(cards).toHaveLength(1);
-    expect(parseCard(cards[0])).toMatchObject({ id: 'logbook.mention:e-7:w-perfect-days', to: 'media', about: { item: 'w-perfect-days' }, data: { workId: 'w-perfect-days', day: '2026-10-02', feelings: [{ w: 'wistful', family: 'sadness' }] } });
+    expect(parseCard(cards[0])).toMatchObject({ id: 'logbook.mention:e-7:w-perfect-days', to: 'media', about: { item: 'w-perfect-days' }, data: { workId: 'w-perfect-days', day: '2026-10-02', feelings: [{ w: 'wistful', family: 'wistful' }] } });
   });
+});
+
+it('a private line never leaves Logbook', () => {
+  expect(mentionCards('thought about /Perfect Days', works, [], '2026-10-02', 'e-8', 9, true)).toEqual([]);
 });

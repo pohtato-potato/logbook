@@ -65,7 +65,7 @@ export function LineWriter({ own, people, tags, onOpenFeeling, removerRef }: { o
     try {
       const r = await keepLine(db, { text, marks, at: new Date() }, own);
       // A line that names a work with / goes to that work in Media too (a logbook.mention card).
-      try { const e = await db.entries.get(r.entryId); const cards = mentionCards(text.trim(), works, feelingsOf(text, own), e?.day ?? '', e?.uid ?? String(r.entryId)); if (cards.length && e) await putCards(cards); } catch { /* the line is kept either way */ }
+      try { const e = await db.entries.get(r.entryId); const cards = mentionCards(text.trim(), works, feelingsOf(text, own), e?.day ?? '', e?.uid ?? String(r.entryId), Date.now(), !!marks.priv); if (cards.length && e) await putCards(cards); } catch { /* the line is kept either way */ }
       setText(''); setMarks({}); try { sessionStorage.removeItem('logbook-draft'); } catch { /* ignore */ }
       const added = r.momentId ? ' Your feelings were added to your inner weather.' : '';
       undo.show(r.undo, `Kept.${added}${r.skipped.length ? ` ${r.skipped.join(', ')} was already there from the last hour.` : ''}`);
