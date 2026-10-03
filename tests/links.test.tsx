@@ -17,7 +17,7 @@ describe('linked sources', () => {
     expect((await getSettings(db)).links).toEqual({ lastfm: ['old', 'new'], lastfmKey: 'k', googleClientId: 'abc.apps.googleusercontent.com' });
   });
   it('a starter file with odd link values is refused', () => expect(() => parseStarter(JSON.stringify({ format: 'logbook-starter', version: 1, lastfm: 'old' }))).toThrow('Nothing was changed.'));
-  it('new sources are on by default', () => expect(sourcesOf(DEFAULT_SETTINGS)).toEqual({ weather: true, places: true, songs: true, drive: true, photos: true }));
+  it('new sources are on by default', () => expect(sourcesOf(DEFAULT_SETTINGS)).toEqual({ weather: true, places: true, songs: true, drive: true, photos: true, sync: true }));
   it('Settings says what each linked source needs', () => {
     const none = renderToStaticMarkup(<SettingsView {...props} settings={DEFAULT_SETTINGS} />);
     expect(none).toContain('Linked sources'); expect(none).toContain('Not set up: needs a Last.fm key and username in your starter file.');
