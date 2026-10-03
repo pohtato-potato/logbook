@@ -6,8 +6,7 @@ import { loadLookup } from '../db/lookup';
 import type { Entry, Person, Place, Span, WeekSong } from '../db/types';
 import { dayKey, parseDay } from '../domain/day';
 import { PERSON_THREADS, tagFamily } from '../domain/colour';
-import { ratingText } from '../domain/rating';
-import { DOING, dateRange, entryLine, type Lookup } from '../domain/entryText';
+import { dateRange, entryLine, type Lookup } from '../domain/entryText';
 import { drawPlaceMap } from '../draw/placeMap';
 import { Scene } from '../draw/Canvas';
 import { FAMILY_NAME, type Family } from '../vocab/vocab';
@@ -25,22 +24,19 @@ import { ensureWeeks } from '../db/songs';
 import { fetchJson } from '../sources/http';
 import { usePrivacy } from '../ui/Privacy';
 
-export const SHELF_NAME: Record<ShelfId, string> = { firsts: 'Firsts', media: 'Films, books and shows', quotes: 'Quotes', places: 'Places', keeps: 'Keepsakes', bdays: 'Birthdays and gifts', songs: 'Songs of the week', spans: 'Spans' };
-const EMPTY: Record<ShelfId, string> = { firsts: 'Firsts appear here when you mark something First.', media: 'Films, books and shows appear here when you keep one from the + button.', quotes: 'Quotes appear here when you keep one from the + button.',
+export const SHELF_NAME: Record<ShelfId, string> = { firsts: 'Firsts', quotes: 'Quotes', places: 'Places', keeps: 'Keepsakes', bdays: 'Birthdays and gifts', songs: 'Songs of the week', spans: 'Spans' };
+const EMPTY: Record<ShelfId, string> = { firsts: 'Firsts appear here when you mark something First.', quotes: 'Quotes appear here when you keep one from the + button.',
   places: 'Places appear here when you keep one from the + button.', keeps: 'Keepsakes appear here when you keep one from the + button.', bdays: 'Birthdays come from your private starter file, in Settings.', songs: 'Songs of the week come from Last.fm, once it is set up in your starter file.', spans: 'Trips and stretches of days appear here when you keep a span.' };
 const short = (d: string) => parseDay(d).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
 const plural = (n: number, one: string, many = one + 's') => `${n} ${n === 1 ? one : many}`;
 const count = (n: number, one: string) => (n ? plural(n, one) : 'None yet');
 export { nextBirthday };
-const media = (es: Entry[]) => es.filter(e => e.data?.kind === 'media');
 /* The small line under each shelf's name. */
 export function shelfCounts(entries: Entry[], places: Place[], people: Person[], spans: Span[], today: string): Record<ShelfId, string> {
   const year = today.slice(0, 4), firsts = entries.filter(e => e.marks.first && e.day.startsWith(year)).length;
-  const cur = media(entries).filter(e => e.data?.kind === 'media' && e.data.current).length, m = media(entries).length;
   const bd = people.map(p => ({ p, b: nextBirthday(p.birthday, today) })).filter(x => x.b).sort((a, b) => a.b!.inDays - b.b!.inDays)[0];
   return {
     firsts: firsts ? `${firsts} this year` : 'None yet',
-    media: cur ? `${cur} on the go` : m ? plural(m, 'kept', 'kept') : 'None yet',
     quotes: count(entries.filter(e => e.kind === 'quote').length, 'quote'),
     places: places.some(p => p.first) ? `${places.length}, of them ${plural(places.filter(p => p.first).length, 'first')}` : count(places.length, 'place'),
     keeps: count(entries.filter(e => e.kind === 'keep').length, 'keepsake'),
@@ -69,13 +65,6 @@ export function ShelfView(p: ShelfProps) {
   let body: ReactNode[] = [];
   switch (p.shelf) {
     case 'firsts': body = newest.filter(e => e.marks.first).map(e => <Item key={e.id} lead={<span className="addico"><Icon name="first" /></span>} title={entryLine(e, p.lookup).replace(/ \(a first\)/, '')} sub={short(e.day)} onOpen={open(e.day)} />); break;
-    case 'media': {
-      const ms = newest.filter(e => e.data?.kind === 'media'), cur = ms.filter(e => e.data?.kind === 'media' && e.data.current), rest = ms.filter(e => !cur.includes(e));
-      const row = (e: Entry) => { const d = e.data as Extract<Entry['data'], { kind: 'media' }>; return <Item key={e.id} lead={<span className="addico"><Icon name="k-media" /></span>} title={d.title} sub={`${d.media} · ${short(e.day)}${e.text ? ` · ${e.text}` : ''}`} right={<span className="rating">{ratingText(d.rating)}</span>} onOpen={open(e.day)} />; };
-      body = [...(cur.length ? [<h3 key="c" className="subl">Currently</h3>, ...cur.map(e => { const d = e.data as Extract<Entry['data'], { kind: 'media' }>; return <div key={'c' + e.id}>{row(e)}<p className="hint">Currently {DOING[d.media]}</p></div>; })] : []),
-        ...(cur.length && rest.length ? [<h3 key="r" className="subl">Kept</h3>] : []), ...rest.map(row)];
-      break;
-    }
     case 'quotes': body = newest.filter(e => e.kind === 'quote').map(e => <blockquote key={e.id} className="qcard">{entryLine(e, p.lookup).replace(/ \(([^)]*)\)$/, '')}<small>{entryLine(e, p.lookup).match(/\(([^)]*)\)$/)?.[1].replace(/^./, c => c.toUpperCase())} · {short(e.day)}</small></blockquote>); break;
     case 'places': body = p.places.length ? [<Scene key="map" className="mapbig" animate label={`A drawn map of your places. ${p.places.filter(x => x.lat != null).length} of ${p.places.length} have a position; firsts glow.`} draw={(ctx, w, h, t) => drawPlaceMap(ctx, look, w, h, t, p.places, p.homes)} />,
       ...[...p.places].sort((a, b) => b.visits - a.visits).map(pl => <Item key={pl.id} lead={<span className="addico"><Icon name={pl.first ? 'first' : 'k-place'} /></span>} title={`${pl.first ? 'A first: ' : ''}${pl.name}`} sub={`${plural(pl.visits, 'visit')}${pl.lat == null ? ' · no position yet' : ''}`} />)] : []; break;

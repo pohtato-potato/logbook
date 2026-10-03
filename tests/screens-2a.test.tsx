@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { AddSheetView } from '../src/screens/AddSheet';
-import { MediaFormView, QuoteFormView, PlaceFormView, PersonFormView, KeepFormView, SpanFormView, PastFormView, PhotoFormView } from '../src/screens/forms';
+import { QuoteFormView, PlaceFormView, PersonFormView, KeepFormView, SpanFormView, PastFormView, PhotoFormView } from '../src/screens/forms';
 import { VoiceFormView } from '../src/screens/forms/VoiceForm';
 import { ShelvesView, ShelfView, shelfCounts } from '../src/screens/Shelves';
 import { PersonView } from '../src/screens/Person';
@@ -41,7 +41,6 @@ const entries: Entry[] = [e(1, {}), e(2, { kind: 'media', text: 'good', data: { 
 describe('every Stage 2a screen renders cleanly, empty and full', () => {
   it('the + sheet and every form', () => {
     const html = [renderToStaticMarkup(<AddSheetView />),
-      renderToStaticMarkup(<MediaFormView media="Other" title="" rating={1} current note="" onChange={noop} onKeep={noop} />),
       renderToStaticMarkup(<QuoteFormView text="" who="Overheard" where="" people={[]} onChange={noop} onKeep={noop} />),
       renderToStaticMarkup(<PlaceFormView name="x" first pos={{ lat: 10, lon: 20 }} canLocate error="" places={places} homes={[{ lat: 10.002, lon: 20.002 }]} onChange={noop} onLocate={noop} onKeep={noop} />),
       renderToStaticMarkup(<PersonFormView who={[]} how="In person" people={[]} onChange={noop} onKeep={noop} />),

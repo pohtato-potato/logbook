@@ -1,8 +1,7 @@
 import type { ReactNode } from 'react';
 import { useRef } from 'react';
-import type { How, MediaKind, Person, Place } from '../../db/types';
+import type { How, Person, Place } from '../../db/types';
 import { PERSON_THREADS } from '../../domain/colour';
-import { RATINGS, ratingText } from '../../domain/rating';
 import { FAMILIES, FAMILY_NAME, type Family } from '../../vocab/vocab';
 import { drawPlaceMap } from '../../draw/placeMap';
 import { Scene } from '../../draw/Canvas';
@@ -21,22 +20,7 @@ export function FormFrame({ title, children, keepLabel, keepSub, disabled, onKee
 const Chips = <T extends string,>({ label, options, value, on, names }: { label: string; options: readonly T[]; value: T | T[]; on(v: T): void; names?: (v: T) => string }) =>
   <div className="chips" role="group" aria-label={label}>{options.map(o => { const sel = Array.isArray(value) ? value.includes(o) : value === o; return <button key={o} type="button" className={'chip' + (sel ? ' on ink' : '')} aria-pressed={sel} onClick={() => on(o)}>{names ? names(o) : o}</button>; })}</div>;
 const Field = ({ label, children }: { label: string; children: ReactNode }) => <label className="field"><span>{label}</span>{children}</label>;
-const lower = (m: MediaKind) => (m === 'Other' ? 'one' : m.toLowerCase());
 
-export const MEDIA_KINDS: MediaKind[] = ['Film', 'Series', 'Book', 'Game', 'Album', 'Other'];
-export type MediaState = { media: MediaKind; title: string; rating: number; current: boolean; note: string };
-/* A film, book or show on the owner's 1-7 scale. The buttons are neutral: a rating is never a feeling colour. */
-export function MediaFormView(p: MediaState & Change<MediaState> & { keepSub?: string }) {
-  return <FormFrame title="Film, book or show" keepLabel={`Keep this ${lower(p.media)}`} keepSub={p.keepSub} disabled={!p.title.trim()} onKeep={p.onKeep}>
-    <Chips label="Kind" options={MEDIA_KINDS} value={p.media} on={media => p.onChange({ media })} />
-    <Field label="Title"><input className="sinput" value={p.title} onChange={e => p.onChange({ title: e.target.value })} /></Field>
-    <h2 className="lbl">Your rating</h2>
-    <div className="sewrow" role="group" aria-label="Rating, 1 to 7">{RATINGS.map(([n, words]) => <button key={n} type="button" className={'sewbtn' + (p.rating === n ? ' on' : '')} aria-pressed={p.rating === n} aria-label={`${n}, ${words}`} onClick={() => p.onChange({ rating: n })}>{n}</button>)}</div>
-    <p className="sewlab">{ratingText(p.rating)}{p.rating === 4 ? ' (the true middle)' : ''}</p>
-    <Field label="One line about it (optional)"><input className="sinput" value={p.note} onChange={e => p.onChange({ note: e.target.value })} /></Field>
-    <label className="toggle"><input type="checkbox" checked={p.current} onChange={e => p.onChange({ current: e.target.checked })} /><span>Pin to Currently (still watching, reading or playing)</span></label>
-  </FormFrame>;
-}
 export type QuoteState = { text: string; who: string; where: string };
 export function QuoteFormView(p: QuoteState & Change<QuoteState> & { people: Person[]; keepSub?: string }) {
   const whos = [...p.people.map(x => x.initial), 'Overheard', 'A book or film'];

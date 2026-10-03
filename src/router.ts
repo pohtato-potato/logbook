@@ -1,7 +1,7 @@
 import { useSyncExternalStore } from 'react';
-export const FORM_KINDS = ['photo', 'media', 'quote', 'place', 'person', 'keep', 'voice', 'span', 'past'] as const;
+export const FORM_KINDS = ['photo', 'quote', 'place', 'person', 'keep', 'voice', 'span', 'past'] as const;
 export type FormKind = (typeof FORM_KINDS)[number];
-export const SHELF_IDS = ['firsts', 'media', 'quotes', 'places', 'keeps', 'bdays', 'songs', 'spans'] as const;
+export const SHELF_IDS = ['firsts', 'quotes', 'places', 'keeps', 'bdays', 'songs', 'spans'] as const;
 export type ShelfId = (typeof SHELF_IDS)[number];
 export const CAL_TABS = ['days', 'gallery', 'year', 'life', 'feelings'] as const;
 export type CalTab = (typeof CAL_TABS)[number];

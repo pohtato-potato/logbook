@@ -75,8 +75,8 @@ describe('I14, I15, M8: sharing in keeps every word', () => {
   it('a quote keeps the owner’s line as where it came from', () => {
     expect(shareToEntry({ title: '', text: 'Be kind.', url: '' }, 'quote', 'Mum read this out at dinner')).toEqual({ kind: 'quote', text: 'Be kind.', data: { kind: 'quote', who: 'A book or film', where: 'Mum read this out at dinner' } });
   });
-  it('watched carries the title and the owner’s line into the form', () => {
-    expect(shareToEntry({ title: 'Up', text: '', url: '' }, 'watched', 'with Ma')).toEqual({ media: { title: 'Up', note: 'with Ma' } });
+  it('watched goes to Media now, carrying the title, the owner’s line and the address', () => {
+    expect(shareToEntry({ title: 'Up', text: '', url: '' }, 'watched', 'with Ma')).toEqual({ toMedia: { title: 'Up', text: 'with Ma', url: '' } });
   });
   it('an address Logbook won’t open is kept as words, not lost', () => {
     expect(shareToEntry({ title: '', text: '', url: 'javascript:alert(1)' }, 'link', '')).toEqual({ kind: 'link', text: '', data: { kind: 'link', url: '', title: 'javascript:alert(1)' } });

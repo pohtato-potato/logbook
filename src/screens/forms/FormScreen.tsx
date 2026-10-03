@@ -1,5 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
-import { clearMediaPrefill, peekMediaPrefill } from '../../share';
+import { useRef, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../../db/db';
 import { getSettings, keepEntry, keepPlace, keepSpan, type EntryDraft, type Undo } from '../../db/actions';
@@ -13,8 +12,8 @@ import { fetchJson } from '../../sources/http';
 import { overpassQuery, parsePlaces } from '../../sources/overpass';
 import type { SuggestState } from './index';
 import { useNow } from '../../ui/useNow';
-import { KeepFormView, MediaFormView, PastFormView, PersonFormView, PhotoFormView, PlaceFormView, QuoteFormView, SpanFormView,
-  type KeepState, type MediaState, type PastState, type PersonState, type PlaceState, type QuoteState, type SpanState } from './index';
+import { KeepFormView, PastFormView, PersonFormView, PhotoFormView, PlaceFormView, QuoteFormView, SpanFormView,
+  type KeepState, type PastState, type PersonState, type PlaceState, type QuoteState, type SpanState } from './index';
 import { VoiceForm } from './VoiceForm';
 import { chooseFromGooglePhotos, googlePhotosReady } from '../../ui/googlePhotos';
 
@@ -32,8 +31,6 @@ const words = (d: string) => parseDay(d).toLocaleDateString('en-GB', { day: 'num
 export function FormScreen({ kind }: { kind: FormKind }) {
   const now = useNow(), keep = useKeeper(), undo = useUndo(), sub = `It lands in today, at ${timeLabel(new Date())}`;
   const data = useLiveQuery(async () => ({ people: await db.people.toArray(), places: await db.places.toArray(), homes: (await getSettings(db)).homes, google: googlePhotosReady(await getSettings(db)) }), []);
-  const [prefill] = useState(peekMediaPrefill); useEffect(() => clearMediaPrefill(), []);
-  const [media, setMedia] = useForm<MediaState>({ media: 'Film', title: prefill.title, rating: 5, current: false, note: prefill.note });
   const [quote, setQuote] = useForm<QuoteState>({ text: '', who: 'Overheard', where: '' });
   const [place, setPlace] = useForm<PlaceState>({ name: '', first: false });
   const [pos, setPos] = useState<{ lat: number; lon: number } | null>(null), [locating, setLocating] = useState(false), [placeErr, setPlaceErr] = useState('');
@@ -53,7 +50,6 @@ export function FormScreen({ kind }: { kind: FormKind }) {
   const entry = (d: Omit<EntryDraft, 'at'>, message = 'Kept in today.') => async () => ({ undo: (await keepEntry(db, { ...d, at: new Date() })).undo, message });
   const people = data?.people ?? [];
   switch (kind) {
-    case 'media': return <MediaFormView {...media} keepSub={sub} onChange={setMedia} onKeep={() => keep(entry({ kind: 'media', text: media.note, data: { kind: 'media', media: media.media, title: media.title.trim(), rating: media.rating, current: media.current } }))} />;
     case 'quote': return <QuoteFormView {...quote} people={people} keepSub={sub} onChange={setQuote}
       onKeep={() => keep(entry({ kind: 'quote', text: quote.text, people: quote.who.length === 1 ? [quote.who] : [], data: { kind: 'quote', who: quote.who, ...(quote.where.trim() ? { where: quote.where.trim() } : {}) } }))} />;
     case 'place': return <PlaceFormView {...place} pos={pos} canLocate={typeof navigator !== 'undefined' && 'geolocation' in navigator} locating={locating} error={placeErr} suggestions={sugg} suggestState={sState} onSuggest={onSuggest} places={data?.places ?? []} homes={data?.homes ?? []} keepSub={sub} onChange={setPlace}

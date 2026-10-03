@@ -1,16 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { MediaFormView, QuoteFormView, PlaceFormView, PersonFormView, SpanFormView, PastFormView, KeepFormView, validPastDate } from '../src/screens/forms';
+import { QuoteFormView, PlaceFormView, PersonFormView, SpanFormView, PastFormView, KeepFormView, validPastDate } from '../src/screens/forms';
 
 const noop = () => {};
 const A = { id: 'a', initial: 'A', name: 'Friend A', thread: 2 };
 describe('forms', () => {
-  it('film: the 1-7 buttons are neutral with their words, and Keep names the kind', () => {
-    const html = renderToStaticMarkup(<MediaFormView media="Film" title="Past Lives" rating={6} current={false} note="" onChange={noop} onKeep={noop} />);
-    expect(html).toContain('6 of 7 · Exceptional'); expect(html).toContain('Keep this film'); expect(html).not.toMatch(/--fc/);
-    expect(html).toContain('aria-label="6, Exceptional"');
-  });
-  it('film: Keep waits for a title', () => expect(renderToStaticMarkup(<MediaFormView media="Book" title=" " rating={4} current={false} note="" onChange={noop} onKeep={noop} />)).toMatch(/disabled=""[^>]*>[^]*Keep this book/));
   it('quote: who said it, including Overheard', () => {
     const html = renderToStaticMarkup(<QuoteFormView text="x" who="Overheard" where="" people={[A]} onChange={noop} onKeep={noop} />);
     expect(html).toContain('Friend A'); expect(html).toContain('A book or film');

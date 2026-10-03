@@ -2,13 +2,13 @@ import { useState } from 'react';
 import { db } from '../db/db';
 import { keepEntry } from '../db/actions';
 import { hostOf } from '../domain/entryText';
-import { clearShare, safeUrl, setMediaPrefill, shareToEntry, takeShare, type Shared } from '../share';
+import { clearShare, handToMedia, safeUrl, shareToEntry, takeShare, type Shared } from '../share';
 import { Icon } from '../ui/Icons';
 import { useUndo } from '../ui/Undo';
 import { go } from '../router';
 
 export type ShareAs = 'watched' | 'link' | 'quote';
-const KEEP: Record<ShareAs, string> = { watched: 'Rate it and keep it', link: 'Keep this link', quote: 'Keep this quote' };
+const KEEP: Record<ShareAs, string> = { watched: 'Open it in Media', link: 'Keep this link', quote: 'Keep this quote' };
 /* Something shared from another app: keep it as watched, as a link, or as a quote, with a line of your own. Nothing is fetched. */
 export function ShareSheetView({ shared, as, line, onAs, onLine, onKeep, onCancel }: { shared: Shared | null; as: ShareAs; line: string; onAs(a: ShareAs): void; onLine(l: string): void; onKeep(): void; onCancel(): void }) {
   if (!shared) return <div className="scr"><div className="content scroll"><header className="thead"><h1 className="tdate sm">Keep in Logbook</h1></header>
@@ -32,7 +32,7 @@ export function ShareSheet() {
   return <ShareSheetView shared={shared} as={as} line={line} onAs={setAs} onLine={setLine} onCancel={done} onKeep={async () => {
     if (!shared) return done();
     const k = shareToEntry(shared, as, line);
-    if ('media' in k) { setMediaPrefill(k.media); clearShare(); go({ name: 'form', kind: 'media' }); return; }
+    if ('toMedia' in k) { try { const where = await handToMedia(shared, line); clearShare(); location.assign(where); } catch (e) { undo.fail(e); } return; }
     try {
       const r = await keepEntry(db, { ...k, at: new Date() });
       undo.show(r.undo, 'Kept in today.', { carry: true }); done();

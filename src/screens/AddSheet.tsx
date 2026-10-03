@@ -2,7 +2,7 @@ import { Icon, type IconName } from '../ui/Icons';
 import { Tabs } from '../ui/Tabs';
 import { go, type FormKind } from '../router';
 
-export const ADD_KINDS: [FormKind, string, string][] = [['photo', 'Photo', 'From your gallery'], ['media', 'Film, book or show', 'With a 1–7 rating'], ['quote', 'Quote', 'Said to you, or overheard'], ['place', 'Place', 'Firsts light up the map'],
+export const ADD_KINDS: [FormKind, string, string][] = [['photo', 'Photo', 'From your gallery'], ['quote', 'Quote', 'Said to you, or overheard'], ['place', 'Place', 'Firsts light up the map'],
   ['person', 'Person', 'Seen, called or messaged'], ['keep', 'Keepsake', 'A ticket, a note, a thing'], ['voice', 'Voice note', 'Say it instead'], ['span', 'Span', 'A trip or a stretch of days'], ['past', 'Something from before', 'Backdate a big moment']];
 const icon = (k: FormKind): IconName => (k === 'photo' ? 'photo' : (`k-${k}` as IconName));
 /* Everything that can be kept. Feeling, the most common, is the big button at the bottom, nearest the thumb. */
