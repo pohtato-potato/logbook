@@ -15,7 +15,7 @@ const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replac
 /* The mirror behind the textarea: the same text, with tags, people and feelings painted in. Unknown :words stay plain, underlined. */
 export function highlight(text: string, own: Record<string, Family>, people: Person[] = [], pal: Record<Family | 'fog', string> = palette('dark')): string {
   let out = '', i = 0;
-  for (const t of tokenize(text)) {
+  for (const t of tokenize(text, people.map(p => p.initial))) {
     out += esc(text.slice(i, t.start));
     if (t.kind === 'tag') out += `<mark class="h-tag">${esc(t.raw)}</mark>`;
     else if (t.kind === 'person') { const p = people.find(q => q.initial === t.value); out += p ? `<mark class="h-person" style="--pc:${PERSON_THREADS[p.thread % PERSON_THREADS.length]}">${esc(t.raw)}</mark>` : esc(t.raw); }
@@ -48,7 +48,7 @@ export function LineWriter({ own, people, tags, onOpenFeeling, removerRef }: { o
     let items: Sugg[] = [];
     if (m[2] === '#') { items = tags.filter(t => t.startsWith(q)).slice(0, 5).map(t => ({ label: '#' + t, insert: '#' + t, note: '' })); if (q && !tags.includes(q)) items.push({ label: `Make a new tag, #${q}`, insert: '#' + q, note: '' }); }
     else if (m[2] === '/') items = workSuggestions(q, works).map(w => ({ label: '/' + w.title, insert: '/' + w.title, note: `in Media${w.year ? `, ${w.year}` : ''}` }));
-    else if (m[2] === '@') items = people.filter(p => p.initial.toLowerCase().startsWith(q)).map(p => ({ label: `@${p.initial}, ${p.name}`, insert: '@' + p.initial, note: '' }));
+    else if (m[2] === '@') items = people.filter(p => p.initial.toLowerCase().startsWith(q) || p.name.toLowerCase().startsWith(q)).map(p => ({ label: `@${p.initial}, ${p.name}`, insert: '@' + p.initial, note: '' }));
     else items = (q ? searchFeelings(q, own, 6) : STARTERS.map(w => ({ w, family: feelingOf(w, own)!.family, note: '', kind: 'atlas' as const })))
       .map(h => ({ label: h.w, insert: ':' + h.w.replace(/ /g, '-'), note: FAMILY_NAME[h.family] + (h.note.startsWith('means') ? ', ' + h.note : ''), family: h.family }));
     setSugg(items.length ? { items, start } : null);

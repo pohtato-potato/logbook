@@ -23,3 +23,13 @@
 .md-items{list-style:none; margin:8px 0 0; padding:0; display:grid; gap:10px}
 .md-items li{display:grid; gap:2px}
 .md-items a{color:inherit; text-decoration:underline; text-underline-offset:.2em; min-height:44px; display:inline-flex; align-items:center}
+/* People: the add/edit form and the list */
+.pform{display:grid; gap:12px}
+.pform fieldset{border:0; margin:0; padding:0; min-width:0}
+.pform legend{font-size:var(--f14); font-weight:700; color:var(--muted); padding:0; margin-bottom:4px}
+.row2b{display:grid; grid-template-columns:minmax(0, 1fr) minmax(0, 2fr); gap:10px}
+.pbtns{display:flex; flex-wrap:wrap; gap:10px; margin:12px 0}
+.pbtns .btn{min-height:44px}
+.btn.danger{color:var(--ink); border-color:var(--line); text-decoration:underline; text-underline-offset:3px}
+.sr{position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap}
+.thead.row2 > .btn.sm{margin-left:auto}

@@ -18,6 +18,7 @@ import { AddSheetView } from './screens/AddSheet';
 import { FormScreen } from './screens/forms/FormScreen';
 import { Shelf, Shelves } from './screens/Shelves';
 import { Person } from './screens/Person';
+import { People, PersonEdit } from './screens/People';
 import { TagPage } from './screens/TagPage';
 import { Search } from './screens/Search';
 import { Almanac } from './screens/Almanac';
@@ -55,6 +56,8 @@ export function App() {
     {r.name === 'shelves' && <Shelves />}
     {r.name === 'shelf' && <Shelf shelf={r.shelf} />}
     {r.name === 'person' && <Person id={r.id} />}
+    {r.name === 'people' && <People />}
+    {r.name === 'person-edit' && <PersonEdit key={r.id ?? 'new'} id={r.id} />}
     {r.name === 'tag' && <TagPage tag={r.tag} />}
     {r.name === 'search' && <Search />}
     {r.name === 'almanac' && <Almanac tab={r.tab} />}

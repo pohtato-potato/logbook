@@ -23,9 +23,9 @@ export async function keepLine(db: LogbookDb, { text, marks, at }: { text: strin
   const clean = text.trim();
   const day = dayKey(at), t = at.getTime();
   const recent = new Set((await db.moments.where('at').between(t - HOUR, t + 1).toArray()).map(m => m.word));
-  const { moment, skipped } = momentFromLine(feelingsOf(clean, own), recent);
+  const { moment, skipped } = momentFromLine(feelingsOf(clean, own), recent), handles = (await db.people.toArray()).map(p => p.initial);
   return guard(() => db.transaction('rw', db.entries, db.moments, db.tags, async () => {
-    const entry: Entry = { day, at: t, tz: timeZone(), kind: 'line', text: clean, marks: { ...marks }, tags: tagsOf(clean), people: peopleOf(clean), writtenAt: Date.now() };
+    const entry: Entry = { day, at: t, tz: timeZone(), kind: 'line', text: clean, marks: { ...marks }, tags: tagsOf(clean), people: peopleOf(clean, handles), writtenAt: Date.now() };
     const entryId = await db.entries.add(entry);
     const made: string[] = [];
     for (const name of entry.tags) if (!(await db.tags.get(name))) { await db.tags.add({ name, created: t }); made.push(name); }

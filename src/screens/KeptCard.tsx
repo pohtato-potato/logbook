@@ -15,19 +15,19 @@ import { LockedEntry, usePrivacy } from '../ui/Privacy';
 
 type Opens = { onOpenFeeling: (w: string) => void; onOpenTag?: (tag: string) => void; onOpenPerson?: (initial: string) => void };
 /* A person by initial, ringed in their own thread colour (never a feeling colour). A button when it can open their page. */
-export function Mention({ initial, lookup, onOpen }: { initial: string; lookup?: Lookup; onOpen?: (i: string) => void }) {
+export function Mention({ initial, shown = initial, lookup, onOpen }: { initial: string; shown?: string; lookup?: Lookup; onOpen?: (i: string) => void }) {
   const p = lookup?.people.get(initial), style = { ['--pc' as string]: PERSON_THREADS[(p?.thread ?? 0) % PERSON_THREADS.length] };
   const label = p ? `${p.name}. Open their page` : undefined;
-  return onOpen ? <button type="button" className="mention" style={style} aria-label={label} onClick={() => onOpen(initial)}><b aria-hidden="true">@</b>{initial}</button>
-    : <span className="mention" style={style}><b aria-hidden="true">@</b>{initial}</span>;
+  return onOpen ? <button type="button" className="mention" style={style} aria-label={label} onClick={() => onOpen(initial)}><b aria-hidden="true">@</b>{shown}</button>
+    : <span className="mention" style={style}><b aria-hidden="true">@</b>{shown}</span>;
 }
 /* A kept line, with tags, people and feelings as chips. Unknown :words stay plain text. */
 export function RichText({ text, own, onOpenFeeling, onOpenTag, onOpenPerson, lookup, tagHistory = {}, todayFamily = 'calm' }: Opens & { text: string; own: Record<string, Family>; lookup?: Lookup; tagHistory?: Record<string, Family[]>; todayFamily?: Family }) {
   const parts: ReactNode[] = []; let i = 0;
-  tokenize(text).forEach((t, k) => {
+  tokenize(text, lookup ? [...lookup.people.keys()] : []).forEach((t, k) => {
     parts.push(text.slice(i, t.start));
     if (t.kind === 'tag') parts.push(<TagChip key={k} tag={t.value} family={tagFamily(t.value, tagHistory, todayFamily)} onOpen={onOpenTag && (() => onOpenTag(t.value))} />);
-    else if (t.kind === 'person') parts.push(<Mention key={k} initial={t.value} lookup={lookup} onOpen={onOpenPerson} />);
+    else if (t.kind === 'person') parts.push(<Mention key={k} initial={t.value} shown={t.raw.slice(1)} lookup={lookup} onOpen={onOpenPerson} />);
     else { const x = feelingOf(t.value, own); parts.push(x ? <FeelingChip key={k} word={x.w} family={x.family} onOpen={() => onOpenFeeling(x.w)} /> : t.raw); }
     i = t.end;
   });

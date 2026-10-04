@@ -1,5 +1,6 @@
 import type { LogbookDb } from './db';
 import { guard, saveSettings } from './actions';
+import { normHandle } from '../domain/people';
 
 export class StarterError extends Error { constructor(msg: string) { super(msg); this.name = 'StarterError'; } }
 export interface Starter { format: 'logbook-starter'; version: 1; people: { id: string; initial: string; name: string; birthday?: string; thread?: number }[]; homes: { name: string; lat: number; lon: number; from: string; to?: string }[]; lastfm?: string[]; lastfmKey?: string; googleClientId?: string }
@@ -33,7 +34,7 @@ export function parseStarter(text: string): Starter {
 export async function applyStarter(db: LogbookDb, s: Starter): Promise<void> {
   await guard(() => db.transaction('rw', db.people, db.settings, async () => {
     const had = new Map((await db.people.toArray()).map(p => [p.id, p.thread])); // thread colours chosen since (maybe on another device) stay
-    await db.people.bulkPut(s.people.map((p, i) => ({ id: p.id, initial: p.initial.toUpperCase().slice(0, 1), name: p.name, birthday: p.birthday, thread: p.thread ?? had.get(p.id) ?? i })));
+    await db.people.bulkPut(s.people.map((p, i) => ({ id: p.id, initial: normHandle(p.initial) || p.initial.toUpperCase().slice(0, 1), name: p.name, birthday: p.birthday, thread: p.thread ?? had.get(p.id) ?? i })));
     await saveSettings(db, { homes: s.homes, starterLoaded: true, links: { lastfm: s.lastfm ?? [], ...(s.lastfmKey ? { lastfmKey: s.lastfmKey } : {}), ...(s.googleClientId ? { googleClientId: s.googleClientId } : {}) } });
   }));
 }

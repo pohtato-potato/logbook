@@ -1,3 +1,4 @@
+import { matchHandle } from './people';
 import { feelingOf, type Family } from '../vocab/vocab';
 
 export interface Token { kind: 'tag' | 'person' | 'feeling'; raw: string; value: string; start: number; end: number }
@@ -5,20 +6,21 @@ export interface MomentDraft { word: string; family: Family; second?: Family; ab
 /* # tags, @ people, and : feelings, each only at the start of a word (so emails, C#, issue#12 and 5:30 don't count). A person is kept by initial. */
 const TOKEN_RE = /((?<=^|\s)#[\p{L}\p{N}_-]+)|((?<=^|\s)@[A-Za-z]+)|((?<=^|\s):[\p{L}][\p{L}'-]*)/gu;
 
-export function tokenize(text: string): Token[] {
+/* handles: the known people's @ handles, so @Riya can mean @Ri; without them a person is their first letter. */
+export function tokenize(text: string, handles: string[] = []): Token[] {
   const out: Token[] = [];
   for (const m of text.matchAll(TOKEN_RE)) {
     const raw = m[0], start = m.index ?? 0, end = start + raw.length;
     if (m[1]) out.push({ kind: 'tag', raw, value: raw.slice(1).toLowerCase(), start, end });
-    else if (m[2]) out.push({ kind: 'person', raw, value: raw.slice(1, 2).toUpperCase(), start, end });
+    else if (m[2]) out.push({ kind: 'person', raw, value: matchHandle(raw.slice(1), handles), start, end });
     else out.push({ kind: 'feeling', raw, value: raw.slice(1).toLowerCase().replace(/-/g, ' '), start, end });
   }
   return out;
 }
-export const tokenAt = (text: string, pos: number) => tokenize(text).find(t => pos > t.start && pos <= t.end) ?? null;
+export const tokenAt = (text: string, pos: number, handles: string[] = []) => tokenize(text, handles).find(t => pos > t.start && pos <= t.end) ?? null;
 const uniq = <T,>(xs: T[]) => [...new Set(xs)];
 export const tagsOf = (text: string) => uniq(tokenize(text).filter(t => t.kind === 'tag').map(t => t.value));
-export const peopleOf = (text: string) => uniq(tokenize(text).filter(t => t.kind === 'person').map(t => t.value));
+export const peopleOf = (text: string, handles: string[] = []) => uniq(tokenize(text, handles).filter(t => t.kind === 'person').map(t => t.value));
 export function feelingsOf(text: string, own: Record<string, Family>): { w: string; family: Family }[] {
   const seen = new Set<string>(), out: { w: string; family: Family }[] = [];
   tokenize(text).filter(t => t.kind === 'feeling').forEach(t => { const x = feelingOf(t.value, own); if (x && !seen.has(x.w)) { seen.add(x.w); out.push(x); } });

@@ -1,3 +1,4 @@
+import { go } from '../../router';
 import type { ReactNode } from 'react';
 import { useRef } from 'react';
 import type { How, Person, Place } from '../../db/types';
@@ -57,7 +58,7 @@ export function PersonFormView(p: PersonState & Change<PersonState> & { people: 
     <h2 className="lbl">Who</h2>
     {p.people.length ? <div className="faces pick">{p.people.map(x => { const on = p.who.includes(x.initial); return <button key={x.id} type="button" className={'face' + (on ? ' seen' : '')} style={{ ['--pc' as string]: PERSON_THREADS[x.thread % PERSON_THREADS.length] }} aria-pressed={on} aria-label={x.name}
       onClick={() => p.onChange({ who: on ? p.who.filter(w => w !== x.initial) : [...p.who, x.initial] })}>{x.initial}</button>; })}</div>
-      : <p className="hint">No people yet. They come from your private starter file, in Settings.</p>}
+      : <><p className="hint">No people yet.</p><button type="button" className="btn wide" onClick={() => go({ name: 'person-edit' })}>Add a person</button></>}
     <h2 className="lbl">How</h2>
     <Chips label="How" options={['In person', 'Call', 'Messages'] as How[]} value={p.how} on={how => p.onChange({ how })} />
     <p className="hint">Calls and messages count as time together.</p>

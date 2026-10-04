@@ -51,7 +51,8 @@ export function ShelvesView({ counts, people, tags }: { counts: Record<ShelfId, 
     <header className="thead"><h1 className="tdate sm">Shelves</h1><p className="tstamp">Everything, sorted by kind</p></header>
     <div className="shelftiles">{SHELF_IDS.map(k => <button key={k} type="button" className="shelftile" onClick={() => go({ name: 'shelf', shelf: k })}><b>{SHELF_NAME[k]}</b><span>{counts[k]}</span></button>)}</div>
     <section className="panel"><h2 className="lbl">People</h2>{people.length ? <div className="shelfgrid">{people.map(p => <button key={p.id} type="button" className="shelfp" onClick={() => go({ name: 'person', id: p.id })}><Face p={p} /><span>{p.name}</span></button>)}</div>
-      : <p className="hint">People come from your private starter file, in Settings.</p>}</section>
+      : <p className="hint">No people yet.</p>}
+      <div className="pbtns"><button type="button" className="btn" onClick={() => go({ name: 'person-edit' })}>Add a person</button>{people.length > 0 && <button type="button" className="btn ghost" onClick={() => go({ name: 'people' })}>Edit people</button>}</div></section>
     <section className="panel"><h2 className="lbl">Tags</h2>{tags.length ? <><div className="tagcloud">{tags.map(t => <TagChip key={t.name} tag={t.name} family={t.family} onOpen={() => go({ name: 'tag', tag: t.name })} />)}</div><p className="hint">A tag’s colour is the feeling it most often comes with.</p></>
       : <p className="hint">Type # in your line to start a tag.</p>}</section>
   </div><Tabs current="shelves" /></div>;

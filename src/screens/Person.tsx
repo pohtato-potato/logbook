@@ -28,7 +28,7 @@ export function PersonView({ person, stats, year, entries, lookup, filter, onFil
   const shown = [...entries].sort((a, b) => b.day.localeCompare(a.day) || b.at - a.at).filter(e => filter === 'all' || (filter === 'events' ? e.kind !== 'line' : !(locked && e.marks.priv) && feelingsOf(e.text, {}).length > 0));
   let lastMonth = '';
   return <div className="scr"><div className="content scroll">
-    <header className="thead row2"><Back /><h1 className="tdate sm">{person.name}</h1></header>
+    <header className="thead row2"><Back /><h1 className="tdate sm">{person.name}</h1><button type="button" className="btn sm" aria-label={`Edit ${person.name}`} onClick={() => go({ name: 'person-edit', id: person.id })}>Edit</button></header>
     <section className="panel"><div className="phead"><span className="face" style={thread} aria-hidden="true">{person.initial}</span><div>
       <p className="entry"><b>{stats.days ? `Together ${stats.days} ${stats.days === 1 ? 'day' : 'days'} this year` : 'No days together kept yet this year'}</b></p>
       <p className="entry">{stats.last ? `Last together on ${dm(stats.last)}. ` : ''}{bday ? `Birthday on ${dm(bday.day)}.` : ''}</p></div></div>

@@ -8,7 +8,7 @@ export type CalTab = (typeof CAL_TABS)[number];
 export const ALM_TABS = ['report', 'headlines', 'wrapped', 'random'] as const;
 export type AlmTab = (typeof ALM_TABS)[number];
 export type Route = { name: 'today' } | { name: 'cal'; month?: string; tab?: CalTab } | { name: 'day'; day: string } | { name: 'feel'; when: 'now' | 'day'; word?: string } | { name: 'settings' } | { name: 'first-run' }
-  | { name: 'add' } | { name: 'form'; kind: FormKind } | { name: 'shelves' } | { name: 'shelf'; shelf: ShelfId } | { name: 'person'; id: string } | { name: 'tag'; tag: string } | { name: 'search' } | { name: 'almanac'; tab?: AlmTab } | { name: 'share' };
+  | { name: 'add' } | { name: 'form'; kind: FormKind } | { name: 'shelves' } | { name: 'shelf'; shelf: ShelfId } | { name: 'person'; id: string } | { name: 'people' } | { name: 'person-edit'; id?: string } | { name: 'tag'; tag: string } | { name: 'search' } | { name: 'almanac'; tab?: AlmTab } | { name: 'share' };
 const has = <T extends string>(xs: readonly T[], x: string | undefined): x is T => !!x && (xs as readonly string[]).includes(x);
 export function parseRoute(hash: string): Route {
   const [path, query = ''] = hash.replace(/^#\/?/, '').split('?'), p = new URLSearchParams(query), [a, b] = path.split('/');
@@ -21,6 +21,7 @@ export function parseRoute(hash: string): Route {
   if (a === 'form' && has(FORM_KINDS, b)) return { name: 'form', kind: b };
   if (a === 'shelf' && has(SHELF_IDS, b)) return { name: 'shelf', shelf: b };
   if (a === 'person' && arg) return { name: 'person', id: arg };
+  if (a === 'people') { const c = path.split('/')[2]; if (b === 'edit' && c) { try { return { name: 'person-edit', id: decodeURIComponent(c) }; } catch { return { name: 'people' }; } } return b === 'new' ? { name: 'person-edit' } : { name: 'people' }; }
   if (a === 'tag' && arg) return { name: 'tag', tag: arg };
   return { name: 'today' };
 }
@@ -33,6 +34,8 @@ export function routeHash(r: Route): string {
     case 'almanac': return `#/almanac${r.tab && r.tab !== 'report' ? `?tab=${r.tab}` : ''}`;
     case 'shelf': return `#/shelf/${r.shelf}`;
     case 'person': return `#/person/${encodeURIComponent(r.id)}`;
+    case 'people': return '#/people';
+    case 'person-edit': return r.id ? `#/people/edit/${encodeURIComponent(r.id)}` : '#/people/new';
     case 'tag': return `#/tag/${encodeURIComponent(r.tag)}`;
     default: return `#/${r.name}`;
   }
